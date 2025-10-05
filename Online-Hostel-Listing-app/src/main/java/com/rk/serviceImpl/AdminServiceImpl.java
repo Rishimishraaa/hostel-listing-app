@@ -482,7 +482,7 @@ public class AdminServiceImpl implements AdminService {
 		String uniqueKey = student.getId() + "-" + monthDate.toString();
 
 		// 5️⃣ Check if payment already exists
-		boolean exists = paymentRepository.existsByStudentAndMonthAndYear(student.getId(), monthDate.getMonth().getValue(), monthDate.getYear());
+		boolean exists = paymentRepository.existsByStudentAndMonthAndYear(student.getId(), monthDate.getMonthValue(), monthDate.getYear());
 		
 		if (exists) {
 			throw new RuntimeException("Payment already exists for this student and month");
