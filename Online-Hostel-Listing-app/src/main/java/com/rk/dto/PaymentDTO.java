@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class PaymentDTO {
 	private Long id;
+	private String hostelName;
 	private String studentName;
 	private String phone;
 	private String room;

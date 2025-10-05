@@ -1,14 +1,12 @@
 package com.rk;
 
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.core.env.CommandLinePropertySource;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
-import com.rk.entity.User;
 import com.rk.repository.UserRepository;
 import com.stripe.Stripe;
 
@@ -17,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @SpringBootApplication
+@EnableScheduling
 public class OnlineHostelListingApplication implements CommandLineRunner{
 
 	@Value("${stripe.api.key}")
@@ -41,5 +40,8 @@ public class OnlineHostelListingApplication implements CommandLineRunner{
 	public void run(String... args) throws Exception {
 	
 	}
+	
+	
+	
 
 }

@@ -5,12 +5,16 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rk.dto.FloorDTO;
+import com.rk.dto.RatingDTO;
 import com.rk.dto.RoomTypeDTO;
+import com.rk.request.HostelRatingRequest;
 import com.rk.service.HostelService;
 
 import lombok.RequiredArgsConstructor;
@@ -37,5 +41,4 @@ public class HostelController {
 	}
 	
 
-	
 }

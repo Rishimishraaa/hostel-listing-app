@@ -28,9 +28,14 @@ import com.rk.entity.Hostel;
 import com.rk.entity.Role;
 import com.rk.entity.User;
 import com.rk.repository.UserRepository;
+import com.rk.request.OtpResponse;
+import com.rk.request.RequestOtp;
 import com.rk.request.UserLoginRequest;
 import com.rk.request.UserRegisterRequest;
+import com.rk.request.VerifyOtpRequest;
 import com.rk.response.AuthResponse;
+import com.rk.service.UserService;
+import com.rk.serviceImpl.OtpService;
 
 import lombok.Data;
 
@@ -44,7 +49,8 @@ public class AuthController {
 	private final CustomUserDetailsService userDetailsService;
 	private final PasswordEncoder passwordEncoder;
 	private final AuthenticationManager authenticationManager;
-	
+	private final OtpService otpService;
+	private final UserService userService;
 
 	@GetMapping
 	public ResponseEntity<?> welcome(){
@@ -107,5 +113,59 @@ public class AuthController {
 		}
 		
 		return new ResponseEntity<AuthResponse>(response,HttpStatus.OK);
+	}
+	
+	
+	@PostMapping("/request-otp")
+	public ResponseEntity<?> requestOtp(@RequestBody RequestOtp dto) throws Exception{
+		if((dto.getEmail() ==null || dto.getEmail().isBlank())
+				&& (dto.getPhone() == null || dto.getPhone().isBlank())
+				) {
+			return ResponseEntity.badRequest().body(new OtpResponse(false,"Provide email or phone"));
+			
+		}
+		
+		if(dto.getEmail() !=null && !dto.getEmail().isBlank()) {
+			if(userService.findByEmail(dto.getEmail()).isEmpty()) {
+				return ResponseEntity.ok(new OtpResponse(true, "If account exists, OTP has been send"));
+			}
+			otpService.generateAndSendOtpToEmail(dto.getEmail());
+		}
+		
+		
+		if(dto.getPhone()!=null && !dto.getPhone().isBlank()) {
+			if(userService.findByPhone(dto.getPhone()).isEmpty()) {
+				return ResponseEntity.ok(new OtpResponse(true, "If account exists, OTP has been send"));
+			}
+			
+			otpService.generateAndSendTopToPhone(dto.getPhone());
+		}
+		  return ResponseEntity.ok(new OtpResponse(true, "If account exists, OTP has been sent"));
+	}
+	
+	
+	 @PostMapping("/verify-otp")
+	public ResponseEntity<?> verifyOtp(@RequestBody VerifyOtpRequest dto) throws Exception{
+		
+		if(dto.getIdentifier()==null || dto.getOtp() == null || dto.getNewPassword()==null) {
+		    return ResponseEntity.badRequest().body(new OtpResponse(false, "Missing fields"));
+		}
+		
+		boolean ok = otpService.verifyOtp(dto.getIdentifier(), dto.getOtp());
+		
+		if(!ok) {
+		    return ResponseEntity.badRequest().body(new OtpResponse(false, "Invalid or expired OTP"));
+		}
+		
+		if(dto.getIdentifier().contains("@")) {
+			userService.updatePasswordByEmail(dto.getIdentifier(), dto.getNewPassword());
+		}else {
+			userService.updatePasswordByPhone(dto.getIdentifier(), dto.getNewPassword());
+		}
+		
+		
+		
+		
+		return ResponseEntity.ok(new OtpResponse(true, "Password updated successfully!"));
 	}
 }

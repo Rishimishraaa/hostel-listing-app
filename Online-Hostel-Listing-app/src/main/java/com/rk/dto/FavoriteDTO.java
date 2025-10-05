@@ -16,4 +16,5 @@ public class FavoriteDTO {
 	    private LocalDateTime createdAt;
 	    private Long studentId;
 	    private Long hostelId;
+	    private HostelDTO hostel;
 }

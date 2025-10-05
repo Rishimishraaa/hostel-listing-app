@@ -17,6 +17,6 @@ public interface UserRepository extends JpaRepository<User, Long>{
 	@Query("SELECT b.student FROM Booking b WHERE b.hostel.id = :hostelId")
 	List<User> findAllUsersByHostelId(@Param("hostelId") Long hostelId);
 
-
+		Optional<User> findByPhone(String phone);
 	
 }

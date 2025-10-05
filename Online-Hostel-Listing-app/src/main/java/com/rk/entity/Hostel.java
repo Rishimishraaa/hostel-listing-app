@@ -2,6 +2,7 @@ package com.rk.entity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -23,6 +24,7 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
@@ -33,10 +35,12 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Hostel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     private String name;
@@ -71,11 +75,13 @@ public class Hostel {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+ 
+    
     @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL)
     private List<RoomType> roomType;
     
     
-    @JsonIgnore
+ 
     @ToString.Exclude
     @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Floor> floors = new ArrayList<>();
@@ -83,4 +89,19 @@ public class Hostel {
     @ToString.Exclude
     @OneToMany(mappedBy = "hostel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<HostelImage> images = new ArrayList<>();
+    
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(id); // sirf primary key
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Hostel)) return false;
+        Hostel other = (Hostel) obj;
+        return Objects.equals(this.id, other.id);
+    }
+
 }

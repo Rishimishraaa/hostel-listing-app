@@ -41,7 +41,9 @@ public class RoomType {
     private boolean isAvailable;
 
   
-    @OneToMany(mappedBy = "roomType", cascade = CascadeType.ALL)
+    
+    @ToString.Exclude
+    @OneToMany(mappedBy = "roomType", cascade = CascadeType.ALL,fetch = FetchType.EAGER)
     private List<Room> rooms = new ArrayList<>();
     
     

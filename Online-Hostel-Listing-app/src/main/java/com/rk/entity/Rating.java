@@ -22,6 +22,7 @@ import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
@@ -35,10 +36,12 @@ import lombok.ToString;
     uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "hostel_id", "category"})
 )
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Rating {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -49,6 +52,8 @@ public class Rating {
 
     @Enumerated(EnumType.STRING)
     private ReviewCategory category;
+    
+    private String comment;
 
     @JsonIgnore
     @ToString.Exclude

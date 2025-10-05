@@ -52,7 +52,7 @@ public class SecurityConfig {
 		return http.csrf(csrf->csrf.disable())
 				
 				.authorizeHttpRequests(auth->
-		auth.requestMatchers("/api/auth/**","/api/common/**","/api/hostels/**").permitAll()
+		auth.requestMatchers("/api/auth/**","/api/common/**","/api/hostels/**","/api/payment/**").permitAll()
 			.requestMatchers("/api/admin/**").hasAuthority("OWNER")
 			.requestMatchers("/api/student/**").hasAuthority("STUDENT")
 			.anyRequest().authenticated()
@@ -72,7 +72,12 @@ public class SecurityConfig {
 	            public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
 	                CorsConfiguration cfg = new CorsConfiguration();
 	                cfg.setAllowedOrigins(Arrays.asList(
-	                        "http://localhost:3000","http://localhost:5173","http://192.168.43.110:5173","http://192.168.1.3:5173"
+	                        "http://localhost:3000","http://localhost:5173",
+	                        "http://192.168.43.110:5173",
+	                        "http://192.168.1.3:5173",
+	                        "http://192.168.1.11:5173"
+	                       
+	                 
 	                     
 	                ));
 	                cfg.setAllowedMethods(Collections.singletonList("*"));

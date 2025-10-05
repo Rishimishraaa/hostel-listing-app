@@ -15,9 +15,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RatingDTO {
 	 private Long id;
+	 private String hostelName;
+	 private String comment;
 	    private LocalDateTime createdAt;
 	    private Integer score;
-	    private ReviewCategory category;
+	    private String category;
 	    private Long studentId;
 	    private Long hostelId;
+	    private String studentName;
 }

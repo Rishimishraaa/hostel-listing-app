@@ -33,12 +33,15 @@ public class Room {
     private int floorNumber;
     private int capacity; // total allowed occupants
     private int occupacy;
+    
+    @JsonIgnore
     @ToString.Exclude
     @ManyToOne
     @JoinColumn(name = "floor_id")
     private Floor floor;
     
     
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "room_type_id")
     private RoomType roomType;

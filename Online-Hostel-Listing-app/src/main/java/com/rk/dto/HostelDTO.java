@@ -28,4 +28,5 @@ public class HostelDTO {
 	    private List<RatingDTO> ratings;
 	    private List<FloorDTO> floors;
 	    private List<HostelImageDTO> images;
+	    private List<RoomTypeDTO> roomTypes;
 }

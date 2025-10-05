@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.rk.dto.BookingDTO;
 import com.rk.dto.FloorDTO;
 import com.rk.dto.HostelDTO;
 import com.rk.dto.PaymentDTO;
@@ -26,6 +27,7 @@ import com.rk.entity.Hostel;
 import com.rk.entity.RoomType;
 import com.rk.request.AddPaymentRequest;
 import com.rk.request.StudentBookingRequest;
+import com.rk.response.AdminDashboardResponse;
 import com.rk.response.MessageResponse;
 import com.rk.service.AdminService;
 import com.rk.service.HostelService;
@@ -147,9 +149,37 @@ public class AdminController {
 		return ResponseEntity.ok(addStudentPayment);
 	}
 	
+	
+	
+	
+	@GetMapping("/conferm-booking/{bookingId}")
+	public ResponseEntity<?> confermStudent(@PathVariable Long bookingId){
+		return null;
+	}
+	
+	@GetMapping("/asign-room/{bookingId}/{roomId}")
+	public ResponseEntity<?> asignRoomToStudent(@PathVariable Long bookingId, @PathVariable Long roomId) throws Exception{
+		RoomDTO asignRoomToStudent = adminService.asignRoomToStudent(bookingId, roomId);
+		return ResponseEntity.ok(asignRoomToStudent);
+	}
+	
+	@DeleteMapping("/remove-booking-student/{bookingId}")
+	public ResponseEntity<?> removeStudentFromBooking(@PathVariable Long bookingId) throws Exception{
+		adminService.removeStudentBooking(bookingId);
+		return ResponseEntity.ok("booking deleted successfully");
+	}
+	
 	 @GetMapping("/payment-status/{paymentId}")
 	 public ResponseEntity<?> confermStudentPayment(@PathVariable Long paymentId) throws Exception{
 		 MessageResponse confermStudentPayment = adminService.confermStudentPayment(paymentId);
 		 return ResponseEntity.ok(confermStudentPayment);
+	 }
+	 
+	 
+	 @GetMapping("/fetch-bookings/{hostelId}")
+	 public ResponseEntity<?> getAllBookings(@PathVariable Long hostelId) throws Exception{
+		 List<BookingDTO> bookings = adminService.getAllStudentBookings(hostelId);
+		 return ResponseEntity.ok(bookings);
+		 
 	 }
 }

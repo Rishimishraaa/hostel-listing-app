@@ -21,6 +21,7 @@ public class RoomDTO {
 	private Long floorId;
 	private Long roomTypeId;
 	private List<StudentDTO> students;
+	private Long bookingId;
 
 
 }

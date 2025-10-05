@@ -1,10 +1,10 @@
 package com.rk.service;
 import java.util.List;
 
+import com.rk.dto.BookingDTO;
 import com.rk.dto.FloorDTO;
 import com.rk.dto.HostelDTO;
 import com.rk.dto.PaymentDTO;
-import com.rk.dto.PaymentHistoryDto;
 import com.rk.dto.RoomDTO;
 import com.rk.dto.RoomTypeDTO;
 import com.rk.dto.StudentDTO;
@@ -31,5 +31,9 @@ public interface AdminService {
 	public List<PaymentDTO> getPaymentsForHostel(Long hostelId) throws Exception;
 	public MessageResponse confermStudentPayment(Long paymentId)throws Exception;
 	public PaymentDTO AddStudentPayment(AddPaymentRequest request) throws Exception;
+	public List<BookingDTO> getAllStudentBookings(Long hostelId)throws Exception;
+	public void confermStudentBooking(Long bookingId)throws Exception;
+	public void removeStudentBooking(Long bookingId)throws Exception;
+	public RoomDTO asignRoomToStudent(Long bookingId, Long roomId)throws Exception;
 
 }
