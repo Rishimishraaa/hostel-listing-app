@@ -1,5 +1,14 @@
 #!/bin/bash
-export JAVA_HOME=/opt/java/openjdk
+set -e
+
+# ✅ Correct JAVA_HOME for Railway build
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH=$JAVA_HOME/bin:$PATH
-chmod +x ./mvnw
+
+# ✅ Build Step
+cd Online-Hostel-Listing-app
+chmod +x mvnw
 ./mvnw clean package -DskipTests
+
+# ✅ Deploy Step
+java -jar target/*.jar
