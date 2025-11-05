@@ -1,21 +1,21 @@
 # Use an official OpenJDK 17 image
 FROM eclipse-temurin:17-jdk
 
-# Set working directory
+# Set working directory inside container
 WORKDIR /app
 
-# Copy project files
+# Copy everything from host to container
 COPY . .
 
-# Go inside your app folder
+# Move inside your Spring Boot project folder
 WORKDIR /app/Online-Hostel-Listing-app
 
-# Give permission and build
+# Give permission to mvnw and build the app
 RUN chmod +x mvnw
 RUN ./mvnw clean package -DskipTests
 
-# Expose port 8080
+# Expose port 8080 (Spring Boot default)
 EXPOSE 8080
 
-# Run the Spring Boot JAR
-CMD ["java", "-jar", "target/*.jar"]
+# Run the Spring Boot JAR file
+CMD ["java", "-jar", "target/Online-Hostel-Listing-app-0.0.1-SNAPSHOT.jar"]
