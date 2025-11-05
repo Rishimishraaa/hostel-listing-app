@@ -18,6 +18,7 @@
 # under the License.
 # ----------------------------------------------------------------------------
 
+
 # ----------------------------------------------------------------------------
 # Apache Maven Wrapper startup batch script, version 3.3.4
 #
@@ -280,6 +281,7 @@ if [ -z "$actualDistributionDir" ]; then
   done
   set -f
 fi
+
 
 if [ -z "$actualDistributionDir" ]; then
   verbose "Contents of $TMP_DOWNLOAD_DIR:"
