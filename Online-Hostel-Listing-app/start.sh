@@ -1,15 +1,15 @@
 #!/bin/bash
 set -e
 
-# ✅ Java setup
+# Set JAVA_HOME (Railway environment)
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH=$JAVA_HOME/bin:$PATH
 
-# ✅ Maven wrapper permissions
+# Give permission to mvnw
 chmod +x mvnw
 
-# ✅ Build the project
+# Build project
 ./mvnw clean package -DskipTests
 
-# ✅ Run the JAR file
+# Run jar
 java -jar target/*.jar
