@@ -7,10 +7,10 @@ RUN apt-get update && apt-get install -y maven
 # Set working directory
 WORKDIR /app
 
-# Copy the entire project
-COPY . .
+# Copy only the Spring Boot project folder
+COPY Online-Hostel-Listing-app/ ./Online-Hostel-Listing-app/
 
-# Move into your Spring Boot app directory
+# Move into the Spring Boot app directory
 WORKDIR /app/Online-Hostel-Listing-app
 
 # Build the Spring Boot JAR
