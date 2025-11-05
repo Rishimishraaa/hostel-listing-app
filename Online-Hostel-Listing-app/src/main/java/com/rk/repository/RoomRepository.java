@@ -16,8 +16,16 @@ public interface RoomRepository extends JpaRepository<Room, Long>{
 		       "WHERE h.id = :hostelId")
 		List<Room> findAllRoomsByHostelId(@Param("hostelId") Long hostelId);
 	
-		public Optional<Room> findByRoomNumber(String roomNumber);
+		public Optional<Room> findByRoomNumberAndRoomTypeHostelId(String roomNumber, Long hostelId);
 
+		
+		@Query("""
+			    SELECT r.roomType.sharingType, COUNT(r.roomType.id)
+			    FROM Room r
+			    WHERE r.roomType.hostel.owner.email = :ownerEmail
+			    GROUP BY r.roomType.sharingType
+			""")
+			List<Object[]> getRoomTypeCount(@Param("ownerEmail") String ownerEmail);
 	
 	
 }

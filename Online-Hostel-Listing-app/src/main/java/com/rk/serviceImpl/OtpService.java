@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.rk.entity.OtpToken;
 import com.rk.repository.OtpTokenRepository;
 
+import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
@@ -25,18 +26,23 @@ public class OtpService {
 	private final Random random = new java.security.SecureRandom();
 	
 	@Transactional
-	public void generateAndSendOtpToEmail(String email) {
-		String otp = generateOtp();
-		otpRepository.deleteAllByIdentifier(email);
-		
-		OtpToken token = new OtpToken();
-		token.setIdentifier(email);
-		token.setOtp(otp);
-		token.setExpiresAt(LocalDateTime.now().plusMinutes(OTP_EXPIRY_MIN));
-		token.setUsed(false);
-		otpRepository.save(token);
-		
-		emailService.sendOtpEmail(email, otp);
+	public void generateAndSendOtpToEmail(String email) throws MessagingException {
+		try {
+			String otp = generateOtp();
+			otpRepository.deleteAllByIdentifier(email);
+			
+			OtpToken token = new OtpToken();
+			token.setIdentifier(email);
+			token.setOtp(otp);
+			token.setExpiresAt(LocalDateTime.now().plusMinutes(OTP_EXPIRY_MIN));
+			token.setUsed(false);
+			otpRepository.save(token);
+			
+			emailService.sendOtpEmail(email, otp);
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
 	}
 	
 	

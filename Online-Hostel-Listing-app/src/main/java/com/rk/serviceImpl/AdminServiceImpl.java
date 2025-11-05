@@ -5,12 +5,13 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.rk.config.JwtService;
@@ -23,7 +24,6 @@ import com.rk.dto.FoodInfoDTO;
 import com.rk.dto.HostelDTO;
 import com.rk.dto.HostelImageDTO;
 import com.rk.dto.PaymentDTO;
-import com.rk.dto.PaymentHistoryDto;
 import com.rk.dto.PoliciesDTO;
 import com.rk.dto.RatingDTO;
 import com.rk.dto.RoomDTO;
@@ -42,12 +42,11 @@ import com.rk.entity.HostelImage;
 import com.rk.entity.Payment;
 import com.rk.entity.Policies;
 import com.rk.entity.Rating;
-import com.rk.entity.ReviewCategory;
 import com.rk.entity.Role;
 import com.rk.entity.Room;
 import com.rk.entity.RoomType;
-import com.rk.entity.RoomTypeImage;
 import com.rk.entity.User;
+import com.rk.exception.AppException;
 import com.rk.repository.BookingRepository;
 import com.rk.repository.FloorRepository;
 import com.rk.repository.HostelRepository;
@@ -62,7 +61,10 @@ import com.rk.service.AdminService;
 
 import jakarta.transaction.Transactional;
 import lombok.Data;
+import lombok.extern.log4j.Log4j;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @Data
 public class AdminServiceImpl implements AdminService {
@@ -75,11 +77,12 @@ public class AdminServiceImpl implements AdminService {
 	private final BookingRepository bookingRepository;
 	private final PaymentRepository paymentRepository;
 	private final FloorRepository floorRepository;
+	private final NotificationService notificationService;
 
 	@Override
-	public HostelDTO getHostelsByOwnerId(Long hostelId) throws Exception {
+	public HostelDTO getHostelsByOwnerId(Long hostelId) throws AppException {
 		Hostel hostels = hostelRepository.findById(hostelId)
-				.orElseThrow(() -> new RuntimeException("invalid hostel id or hostel not found"));
+				.orElseThrow(() -> new AppException("invalid hostel id or hostel not found"));
 		HostelDTO convertHostelToDto = convertHostelToDto(hostels);
 		return convertHostelToDto;
 
@@ -87,7 +90,7 @@ public class AdminServiceImpl implements AdminService {
 
 	@Transactional
 	@Override
-	public HostelDTO createHostel(Hostel hostel, String jwt) throws Exception {
+	public HostelDTO createHostel(Hostel hostel, String jwt) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
 		User owner = userRepository.findByEmail(username).get();
@@ -177,11 +180,16 @@ public class AdminServiceImpl implements AdminService {
 
 	private Hostel convertDtoToHostel(HostelDTO dto) {
 
+	try {
 		User owner = userRepository.findById(dto.getOwner().getId())
-				.orElseThrow(() -> new RuntimeException("Owner not found"));
+				.orElseThrow(() -> new AppException("Owner not found"));
 
-		Hostel hostel = Hostel.builder().id(dto.getId()).gender(dto.getGender()).name(dto.getName())
-				.description(dto.getDescription()).owner(owner).build();
+		Hostel hostel = Hostel.builder()
+				.id(dto.getId())
+				.gender(dto.getGender())
+				.name(dto.getName())
+				.description(dto.getDescription())
+				.owner(owner).build();
 
 		AddressDTO address = dto.getAddress();
 		ContactInformationDTO contactInfo = dto.getContactInfo();
@@ -189,7 +197,6 @@ public class AdminServiceImpl implements AdminService {
 		PoliciesDTO policies = dto.getPolicies();
 		FoodInfoDTO foodInfo = dto.getFoodInfo();
 
-		List<RatingDTO> ratings = dto.getRatings();
 		List<HostelImageDTO> images = dto.getImages();
 
 		Address addressDto = Address.builder().city(address.getCity()).state(address.getState())
@@ -224,32 +231,32 @@ public class AdminServiceImpl implements AdminService {
 				.messChargePerMonth(foodInfo.getMessChargePerMonth()).build();
 
 		hostel.setFoodInfo(foodInfoDto);
-		List<Floor> floors = dto.getFloors().stream().map(f -> {
-
-			return Floor.builder().id(f.getId()).hostel(hostel).floorNumber(f.getFloorNumber()).build();
-		}).toList();
-
-		hostel.setFloors(floors);
 
 		List<HostelImage> imagelist = images.stream()
 				.map(img -> HostelImage.builder().id(img.getId()).imageUrl(img.getImageUrl()).hostel(hostel).build())
 				.toList();
 
 		hostel.setImages(imagelist);
-
-		List<Rating> ratinglist = ratings.stream()
-				.map(r -> Rating.builder().id(r.getId()).category(ReviewCategory.valueOf(r.getCategory()))
-						.createdAt(r.getCreatedAt()).hostel(hostel).score(r.getScore()).student(owner).build())
-				.toList();
-
-		hostel.setRatings(ratinglist);
-
 		return hostel;
+
+	} catch (Exception e) {
+		e.printStackTrace();
+		throw new AppException(e.getMessage());
+		}
+	
 	}
 
 	@Override
 	@Transactional
-	public RoomTypeDTO createRoomTypeInHostel(RoomType room, Long hostelId, String jwt) throws Exception {
+	public RoomTypeDTO createRoomTypeInHostel(RoomType room, Long hostelId, String jwt) throws AppException {
+		
+	try {
+	Optional<RoomType> bySharingType = roomTypeRepository.findBySharingTypeAndHostelId(room.getSharingType(),hostelId);
+		
+		if(bySharingType.isPresent()) {
+			throw new AppException(room.getSharingType()+" Sharing already exists!");
+		}
+		
 		Hostel hostel = hostelRepository.findById(hostelId).get();
 		room.setHostel(hostel);
 		if (room.getImages() != null) {
@@ -271,10 +278,14 @@ public class AdminServiceImpl implements AdminService {
 				.images(roomTypeimgDto).build();
 
 		return roomTypeDTO;
+	} catch (Exception e) {
+		e.printStackTrace();
+		throw e;
+	}
 	}
 
 	@Override
-	public RoomTypeDTO updateRoomType(Long roomId, RoomTypeDTO room) throws Exception {
+	public RoomTypeDTO updateRoomType(Long roomId, RoomTypeDTO room) throws AppException {
 
 		Optional<RoomType> byId = roomTypeRepository.findById(roomId);
 
@@ -298,19 +309,17 @@ public class AdminServiceImpl implements AdminService {
 			return roomTypeDTO;
 
 		} else {
-			throw new RuntimeException("invalid room id");
+			throw new AppException("invalid room id");
 		}
 
 	}
 
 	@Override
-	public MessageResponse deleteRoomType(Long roomId) {
+	public MessageResponse deleteRoomType(Long roomId) throws AppException{
 		MessageResponse resp = new MessageResponse();
 		Optional<RoomType> byId = roomTypeRepository.findById(roomId);
 		if (byId.isEmpty()) {
-
-			resp.setMessage("invalid room id");
-			return resp;
+			throw new AppException("RoomType not found!");
 		}
 
 		roomTypeRepository.deleteById(roomId);
@@ -321,8 +330,9 @@ public class AdminServiceImpl implements AdminService {
 
 	@Transactional
 	@Override
-	public HostelDTO updateHostel(HostelDTO dto, String jwt) throws Exception {
+	public HostelDTO updateHostel(HostelDTO dto, String jwt) throws AppException {
 
+	try {
 		Hostel hostel = convertDtoToHostel(dto);
 
 		jwt = jwt.substring(7);
@@ -335,16 +345,22 @@ public class AdminServiceImpl implements AdminService {
 			hostel.getImages().forEach(img -> img.setHostel(hostel));
 		}
 
-		hostelRepository.save(hostel);
+		Hostel save = hostelRepository.save(hostel);
+		
 
-		HostelDTO convertHostelToDto = convertHostelToDto(hostel);
+		HostelDTO convertHostelToDto = convertHostelToDto(save);
 		return convertHostelToDto;
+	} catch (Exception e) {
+		e.printStackTrace();
+		throw new AppException(e.getMessage());
+		}
 	}
 
 	@Override
-	public MessageResponse updateHostelStatus(Long hostelId) throws Exception {
+	public MessageResponse updateHostelStatus(Long hostelId) throws AppException {
+	try {
 		Hostel hostel = hostelRepository.findById(hostelId)
-				.orElseThrow(() -> new RuntimeException("invalid hostel id"));
+				.orElseThrow(() -> new AppException("invalid hostel id"));
 
 		if (hostel.isStatus() == true) {
 			hostel.setStatus(false);
@@ -359,21 +375,25 @@ public class AdminServiceImpl implements AdminService {
 		res.setMessage("hostel update successfully");
 
 		return res;
+	} catch (Exception e) {
+		e.printStackTrace();
+		throw new AppException(e.getMessage());
+	}
 	}
 
 	@Override
-	public RoomDTO createRoom(RoomDTO dto) throws Exception {
+	public RoomDTO createRoom(RoomDTO dto) throws AppException {
 
 		Floor floors = floorRepository.findById(dto.getFloorId())
-				.orElseThrow(() -> new RuntimeException("invalid floor id"));
+				.orElseThrow(() -> new AppException("invalid floor id"));
 
 		RoomType roomSharing = roomTypeRepository.findById(dto.getRoomTypeId())
-				.orElseThrow(() -> new RuntimeException("invalid sharing type / capacity"));
+				.orElseThrow(() -> new AppException("invalid sharing type / capacity"));
 
-		Optional<Room> roomOp = roomRepository.findByRoomNumber(dto.getRoomNumber());
+		Optional<Room> roomOp = roomRepository.findByRoomNumberAndRoomTypeHostelId(dto.getRoomNumber(), floors.getHostel().getId());
 
-		if (roomOp == null) {
-			throw new RuntimeException("room already available");
+		if (roomOp.isPresent()) {
+			throw new AppException("room already available");
 		}
 
 		Room room = Room.builder().roomNumber(dto.getRoomNumber()).capacity(dto.getCapacity()).floor(floors)
@@ -388,45 +408,52 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	@Override
-	public StudentDTO addStudentInHostel(StudentBookingRequest request) throws Exception {
+	public StudentDTO addStudentInHostel(StudentBookingRequest request) throws AppException {
 		BookingDTO bookingDto = request.getBooking();
 		StudentDTO studentDto = request.getStudent();
 		User user = null;
 		Optional<User> byEmail = userRepository.findByEmail(studentDto.getEmail());
+		
+		
 
 		Hostel hostel = hostelRepository.findById(bookingDto.getHostelId())
-				.orElseThrow(() -> new RuntimeException("invalid hostel id"));
+				.orElseThrow(() -> new AppException("invalid hostel id"));
 		Room room = roomRepository.findById(bookingDto.getRoomId())
-				.orElseThrow(() -> new RuntimeException("invalid room id"));
+				.orElseThrow(() -> new AppException("invalid room id"));
 		RoomType roomType = room.getRoomType();
 
 		if (room.getCapacity() < room.getOccupacy()) {
-			throw new RuntimeException("room is full try another room!");
+			throw new AppException("room is full try another room!");
 		}
 
 		if (byEmail.isPresent()) {
 			User user2 = byEmail.get();
 			user = User.builder().paymentStatus(user2.getPaymentStatus()).lastPaymentDate(user2.getLastPaymentDate())
 					.isActive(user2.getIsActive()).id(user2.getId()).fullName(studentDto.getFullName())
-					.email(studentDto.getEmail()).phone(studentDto.getPhone()).role(Role.STUDENT).room(room)
+					.email(studentDto.getEmail()).phone(studentDto.getPhone())
+					.addedByOwner(true)
+					.role(Role.STUDENT).room(room)
 					.hostels(hostel).joiningDate(LocalDate.now()).build();
 		} else {
 			user = User.builder().joiningDate(LocalDate.parse(bookingDto.getStartDate().toString().substring(0, 10)))
 					.paymentStatus("PENDING").isActive(true).fullName(studentDto.getFullName())
-					.email(studentDto.getEmail()).phone(studentDto.getPhone()).role(Role.STUDENT).room(room)
+					.email(studentDto.getEmail())
+					.addedByOwner(true)
+					.phone(studentDto.getPhone()).role(Role.STUDENT).room(room)
 					.hostels(hostel).joiningDate(LocalDate.now()).build();
 		}
+		
 
 		User save = userRepository.save(user);
 
-		Booking booking = Booking.builder().isActive(true).status("CONFERM").student(save).hostel(hostel).room(room)
-				.roomType(roomType).status(bookingDto.getStatus() != null ? bookingDto.getStatus() : "PENDING")
+		Booking booking = Booking.builder().isActive(true).status("CONFIRMED").student(save).hostel(hostel).room(room)
+				.roomType(roomType)
 				.startDate(bookingDto.getStartDate() != null ? bookingDto.getStartDate() : LocalDateTime.now()).build();
 
 		Booking saveBooking = bookingRepository.save(booking);
 
 		if (room.getOccupacy() >= room.getCapacity()) {
-			throw new RuntimeException("room is full cannot book!");
+			throw new AppException("room is full cannot book!");
 		}
 
 		ArrayList<Booking> bookings = new ArrayList<>();
@@ -444,17 +471,21 @@ public class AdminServiceImpl implements AdminService {
 
 	@Override
 	@Transactional
-	public MessageResponse removeStudentFromHostel(Long userId) throws Exception {
-		User student = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Invalid user id"));
+	public MessageResponse removeStudentFromHostel(Long userId) throws AppException {
+		User student = userRepository.findById(userId).orElseThrow(() -> new AppException("Invalid user id"));
 
+		
+		if(!student.getAddedByOwner()) {
+			throw new AppException("Cannot remove a student who registered themselves");
+		}
 		// soft delete: just deactivate user
 		student.setIsActive(false);
 
 		if (student.getBookings() == null) {
-			throw new RuntimeException("Student does not belong to this hostel");
+			throw new AppException("Student does not belong to this hostel");
 		}
 
-		userRepository.save(student);
+		userRepository.delete(student);
 
 		MessageResponse res = new MessageResponse();
 		res.setMessage("student removed from hostel successfully!");
@@ -465,11 +496,11 @@ public class AdminServiceImpl implements AdminService {
 
 	@Transactional
 	@Override
-	public PaymentDTO AddStudentPayment(AddPaymentRequest request) throws Exception {
+	public PaymentDTO AddStudentPayment(AddPaymentRequest request) throws AppException {
 
 		// 1️⃣ Fetch student
 		User student = userRepository.findById(request.getStudentId())
-				.orElseThrow(() -> new RuntimeException("Student not found"));
+				.orElseThrow(() -> new AppException("Student not found"));
 
 		// 2️⃣ Fetch student's single booking
 		Booking booking = bookingRepository.findByStudentId(student.getId());
@@ -485,7 +516,7 @@ public class AdminServiceImpl implements AdminService {
 		boolean exists = paymentRepository.existsByStudentAndMonthAndYear(student.getId(), monthDate.getMonthValue(), monthDate.getYear());
 		
 		if (exists) {
-			throw new RuntimeException("Payment already exists for this student and month");
+			throw new AppException("Payment already exists for this student and month");
 		}
 
 		// 6️⃣ Create and save payment
@@ -493,16 +524,18 @@ public class AdminServiceImpl implements AdminService {
 		payment.setBooking(booking);
 		payment.setMonth(monthDate);
 		payment.setAmount(request.getAmount());
-		payment.setStatus(request.getStatus());
+		payment.setStatus("PENDING");
 		payment.setUniqueKey(uniqueKey);
 
 		Payment savedPayment = paymentRepository.save(payment);
 
 		// 7️⃣ Update student last payment info
-		student.setPaymentStatus(savedPayment.getStatus());
-		student.setLastPaymentDate(savedPayment.getPaidOn());
+		student.setPaymentStatus("PENDING");
+		student.setLastPaymentDate(null);
 		userRepository.save(student);
 
+		notificationService.createNotification(student, "Your payment is pending. Please pay before due date.");
+		
 		// 8️⃣ Return DTO
 		return PaymentDTO.builder().id(savedPayment.getId()).studentId(student.getId())
 				.studentName(student.getFullName()).phone(student.getPhone()).amount(savedPayment.getAmount())
@@ -512,39 +545,57 @@ public class AdminServiceImpl implements AdminService {
 				.paidOn(savedPayment.getPaidOn() != null ? savedPayment.getPaidOn().toString() : null).build();
 	}
 
+	@Transactional
 	@Override
-	public MessageResponse confermStudentPayment(Long paymentId) throws Exception {
+	public MessageResponse confermStudentPayment(Long paymentId)throws AppException{
 
-		Payment payment = paymentRepository.findById(paymentId)
-				.orElseThrow(() -> new RuntimeException("invalid payment id"));
+	    Payment payment = paymentRepository.findById(paymentId)
+	            .orElseThrow(() -> new AppException("invalid payment id"));
 
-		if (payment.getStatus().equals("PENDING")) {
-			payment.setStatus("PAID");
-		}
+	    if (payment.getStatus().equals("PENDING")) {
+	        payment.setStatus("PAID");
+	    }
 
-		payment.setPaidOn(LocalDateTime.now());
+	    payment.setPaidOn(LocalDateTime.now());
 
-		Booking booking = payment.getBooking();
+	    Booking booking = payment.getBooking();
 
-		User user = userRepository.findById(booking.getStudent().getId())
-				.orElseThrow(() -> new RuntimeException("invalid student id / booking id"));
+	    // ✅ Handle null totalAmount safely
+	    Double existingTotal = booking.getTotalAmount() != null ? booking.getTotalAmount() : 0.0;
+	    booking.setTotalAmount(existingTotal + payment.getAmount());
+	    bookingRepository.save(booking);
 
-		Payment save = paymentRepository.save(payment);
+	    User user = userRepository.findById(booking.getStudent().getId())
+	            .orElseThrow(() -> new AppException("invalid student id / booking id"));
 
-		user.setLastPaymentDate(save.getPaidOn());
-		user.setPaymentStatus(save.getStatus());
+	    Payment save = paymentRepository.save(payment);
 
-		userRepository.save(user);
+	    user.setLastPaymentDate(save.getPaidOn());
+	    user.setPaymentStatus(save.getStatus());
+	    userRepository.save(user);
 
-		MessageResponse res = new MessageResponse();
+	    User owner = userRepository.findById(booking.getHostel().getOwner().getId())
+	            .orElseThrow(() -> new AppException("Invalid hostel owner id!"));
 
-		res.setMessage("payment status update successfully");
-		res.setId(save.getId());
-		return res;
+	    // ✅ Notifications
+	    notificationService.createNotification(user, "Payment received by Owner Successfully!");
+	    notificationService.createNotification(owner,
+	            "Payment received by: " + user.getFullName() +
+	            " Room Number: " + payment.getBooking().getRoom().getRoomNumber() +
+	            " Mobile: " + user.getPhone() +
+	            " Rs. " + payment.getAmount());
+
+	    // ✅ Response
+	    MessageResponse res = new MessageResponse();
+	    res.setMessage("Payment status updated successfully");
+	    res.setId(save.getId());
+
+	    return res;
 	}
 
+
 	@Override
-	public List<PaymentDTO> getPaymentsForHostel(Long hostelId) throws Exception {
+	public List<PaymentDTO> getPaymentsForHostel(Long hostelId) throws AppException {
 		List<Payment> payments = paymentRepository.findByBooking_Hostel_Id(hostelId);
 
 		return payments.stream().map(p -> {
@@ -565,7 +616,7 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	@Override
-	public List<StudentDTO> getAllStudentInHostels(Long hostelId) throws Exception {
+	public List<StudentDTO> getAllStudentInHostels(Long hostelId) throws AppException{
 		List<Booking> bookings = bookingRepository.findByHostelId(hostelId);
 
 		if (bookings == null)
@@ -606,10 +657,17 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	@Override
-	public FloorDTO createFloor(FloorDTO dto) {
+	public FloorDTO createFloor(FloorDTO dto) throws AppException{
+		
+		
+		Optional<Floor> byFloorNumber = floorRepository.findByFloorNumberAndHostelId(dto.getFloorNumber(),dto.getHostelId());
+		
+		if(byFloorNumber.isPresent()) {
+			throw new AppException(dto.getFloorNumber()+" Floor is already exists!");
+		}
 
 		Hostel hostel = hostelRepository.findById(dto.getHostelId())
-				.orElseThrow(() -> new RuntimeException("invalid hostel id"));
+				.orElseThrow(() -> new AppException("invalid hostel id"));
 
 		Floor f = new Floor();
 		f.setFloorNumber(dto.getFloorNumber());
@@ -621,7 +679,7 @@ public class AdminServiceImpl implements AdminService {
 	}
 
 	@Override
-	public List<BookingDTO> getAllStudentBookings(Long hostelId) throws Exception {
+	public List<BookingDTO> getAllStudentBookings(Long hostelId) throws AppException {
 
 		List<Booking> bookings = bookingRepository.findByHostelId(hostelId);
 
@@ -643,6 +701,7 @@ public class AdminServiceImpl implements AdminService {
 			}
 
 			return BookingDTO.builder().id(b.getId()).startDate(b.getStartDate()).endDate(b.getEndDate())
+					.requirement("Requirement:- "+b.getRoomType().getSharingType()+" Sharing Room")
 					.hostelId(b.getHostel().getId()).roomId(b.getRoom() != null ? b.getRoom().getId() : null)
 					.totalAmount(b.getTotalAmount())
 					.roomTypeId(b.getRoomType() != null ? b.getRoomType().getId() : null).status(b.getStatus())
@@ -651,61 +710,139 @@ public class AdminServiceImpl implements AdminService {
 
 	}
 
+	@Transactional
 	@Override
-	public RoomDTO asignRoomToStudent(Long bookingId, Long roomId) throws Exception {
-		Room room = roomRepository.findById(roomId).orElseThrow(() -> new RuntimeException("room not available!"));
+	public RoomDTO asignRoomToStudent(Long bookingId, Long roomId)throws AppException {
+	    try {
+	        Room newRoom = roomRepository.findById(roomId)
+	                .orElseThrow(() -> new AppException("Room not available!"));
 
-		Booking booking = bookingRepository.findById(bookingId)
-				.orElseThrow(() -> new RuntimeException("booking not available"));
+	        Booking booking = bookingRepository.findById(bookingId)
+	                .orElseThrow(() -> new AppException("Booking not available!"));
 
-		User user = userRepository.findById(booking.getStudent().getId())
-				.orElseThrow(() -> new RuntimeException("invalid user"));
+	        User user = userRepository.findById(booking.getStudent().getId())
+	                .orElseThrow(() -> new AppException("Invalid user!"));
 
-		booking.setRoom(room);
-		booking.setStatus("CONFIRMED");
-		booking.setStartDate(LocalDateTime.now());
-		Booking save = bookingRepository.save(booking);
+	        // ✅ Check if booking already has a room
+	        Room existingRoom = booking.getRoom();
 
-		user.setBookings(save);
-		userRepository.save(user);
+	        if (existingRoom != null) {
+	            // Remove from old room
+	            existingRoom.setOccupacy(existingRoom.getOccupacy() - 1);
 
-		ArrayList<Booking> bookings = new ArrayList<>();
-		bookings.add(save);
-		room.setBookings(bookings);
-		room.setOccupacy(room.getOccupacy() + 1);
-		Room save2 = roomRepository.save(room);
+	            List<Booking> updatedBookings = existingRoom.getBookings().stream()
+	                    .filter(b -> !b.getId().equals(booking.getId()))
+	                    .toList();
 
-		return RoomDTO.builder().id(roomId).bookingId(bookingId).capacity(save2.getCapacity())
-				.floorId(save2.getFloor().getId()).floorNumber(save2.getFloorNumber()).occupants(save2.getCapacity())
-				.build();
+	            existingRoom.setBookings(new ArrayList<>(updatedBookings));
+	            roomRepository.save(existingRoom);
+	        }
+
+	        // ✅ Assign new room to booking
+	        booking.setRoom(newRoom);
+	        booking.setStatus("CONFIRMED");
+
+	        // ✅ Only update startDate if it was never assigned before
+	        if (booking.getStartDate() == null) {
+	            booking.setStartDate(LocalDateTime.now());
+	        }
+
+	        Booking savedBooking = bookingRepository.save(booking);
+
+	        // ✅ Directly assign booking to user (since one user → one booking)
+	        user.setBookings(savedBooking);
+	        userRepository.save(user);
+
+	        // ✅ Add booking to new room
+	        if (newRoom.getBookings() == null) {
+	            newRoom.setBookings(new ArrayList<>());
+	        }
+
+	        newRoom.getBookings().add(savedBooking);
+	        newRoom.setOccupacy(newRoom.getOccupacy() + 1);
+	        Room savedRoom = roomRepository.save(newRoom);
+
+	        // ✅ Notification
+	        notificationService.createNotification(
+	                user,
+	                "Booking Confirmed. Room assigned by owner.\nYour Room Number: "
+	                        + newRoom.getRoomNumber()
+	                        + ", Floor: " + newRoom.getFloorNumber()
+	                        + " in " + booking.getHostel().getName()
+	        );
+
+	        // ✅ Return DTO
+	        return RoomDTO.builder()
+	                .id(savedRoom.getId())
+	                .bookingId(savedBooking.getId())
+	                .capacity(savedRoom.getCapacity())
+	                .floorId(savedRoom.getFloor().getId())
+	                .floorNumber(savedRoom.getFloorNumber())
+	                .occupants(savedRoom.getOccupacy())
+	                .roomNumber(savedRoom.getRoomNumber())
+	                .build();
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        throw e;
+	    }
 	}
 
+
+
 	@Override
-	public void confermStudentBooking(Long bookingId) throws Exception {
+	public void confermStudentBooking(Long bookingId) throws AppException {
 		Booking booking = bookingRepository.findById(bookingId)
-				.orElseThrow(() -> new RuntimeException("booking not available"));
+				.orElseThrow(() -> new AppException("booking not available"));
 
 		booking.setStatus("CONFIRMED");
 
+		User student = booking.getStudent();
+		
 		bookingRepository.save(booking);
 
 	}
 
 	@Override
-	public void removeStudentBooking(Long bookingId) throws Exception {
+	public void removeStudentBooking(Long bookingId)throws AppException {
 
+	try {
 		Booking booking = bookingRepository.findById(bookingId)
-				.orElseThrow(() -> new RuntimeException("booking not available"));
+				.orElseThrow(() -> new AppException("booking not available"));
 
 		User user = userRepository.findById(booking.getStudent().getId())
-				.orElseThrow(() -> new RuntimeException("user not available"));
-		user.setBookings(null);
-		userRepository.save(user);
+				.orElseThrow(() -> new AppException("user not available"));
+		
+		
+		
+	if(booking.getRoom()!=null) {
+		
 		Room room = booking.getRoom();
 		room.setOccupacy(room.getOccupacy() - 1);
+		List<Booking> list = room.getBookings().stream()
+				.filter(b -> !b.equals(booking)).collect(Collectors.toCollection(ArrayList::new));
+		room.setBookings(list);
 		roomRepository.save(room);
+	}
+	
+		
+		if (Boolean.TRUE.equals(user.getAddedByOwner())) {
+		    //  break reference pehle
+		    booking.setStudent(null);
+		    bookingRepository.save(booking);
+		    userRepository.delete(user);
+		} else {
+		    user.setBookings(null);
+		    userRepository.save(user);
+		    bookingRepository.delete(booking);
+			notificationService.createNotification(user, "Owner removed from "+booking.getHostel().getName()); 
+		}
 
-		booking.setStudent(null);
-		bookingRepository.delete(booking);
+		
+	} catch (Exception e) {
+		e.printStackTrace();
+		throw e;
+		// TODO: handle exception
+	}
 	}
 }

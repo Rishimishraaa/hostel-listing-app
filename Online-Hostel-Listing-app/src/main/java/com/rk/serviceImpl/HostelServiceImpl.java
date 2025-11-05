@@ -1,11 +1,11 @@
 package com.rk.serviceImpl;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.rk.config.JwtService;
@@ -45,7 +45,6 @@ import com.rk.repository.RatingRepository;
 import com.rk.repository.RoomRepository;
 import com.rk.repository.RoomTypeRepository;
 import com.rk.repository.UserRepository;
-import com.rk.request.HostelRatingRequest;
 import com.rk.service.HostelService;
 
 import jakarta.transaction.Transactional;
@@ -65,12 +64,20 @@ public class HostelServiceImpl implements HostelService {
 	private final RatingRepository ratingRepository;
 
 	@Override
-	public List<HostelDTO> getAllHostels() throws Exception {
-		List<Hostel> hostels = hostelRepository.findAll();
-		if (hostels.isEmpty()) {
-			throw new RuntimeException("No hostel available");
+	public List<HostelDTO> getAllHostels(int page, int size,String sharingType) throws Exception {
+		
+		Pageable pageable = PageRequest.of(page, size);
+		Page<Hostel> all = hostelRepository.findAll(pageable);
+		System.out.println(page+"   "+size+"  "+sharingType);
+		if(sharingType!=null) {
+			List<Hostel> hostels= hostelRepository.findDistinctByRoomType_SharingType(Integer.parseInt(sharingType));
+			return hostels.stream().filter(x-> x.isStatus()).map(x -> convertHostelToDto(x)).toList();
+			
 		}
-		List<HostelDTO> list = hostels.stream().map(x -> convertHostelToDto(x)).toList();
+		if(all.isEmpty()) {
+			throw new RuntimeException("hostel not found");
+		}
+		List<HostelDTO> list = all.stream().filter(x-> x.isStatus()).map(x -> convertHostelToDto(x)).toList();
 		return list;
 	}
 
@@ -95,6 +102,7 @@ public class HostelServiceImpl implements HostelService {
 									.lastPaymentDate(
 											std.getLastPaymentDate() != null ? std.getLastPaymentDate().toString()
 													: null)
+									.imageUrl(std.getImageUrl())
 									.build();
 						}).filter(Objects::nonNull).toList();
 
@@ -194,7 +202,9 @@ public class HostelServiceImpl implements HostelService {
 		List<RatingDTO> ratingDto = ratings.stream()
 				.map(rating ->{
 				
-			return	RatingDTO.builder().id(rating.getId()).createdAt(rating.getCreatedAt())
+			return	RatingDTO.builder().id(rating.getId())
+					.comment(rating.getComment())
+					.createdAt(rating.getCreatedAt())
 						.category(rating.getCategory().toString()).hostelId(h.getId()).studentId(rating.getStudent().getId())
 						.score(rating.getScore())
 						.studentName(rating.getStudent().getFullName())

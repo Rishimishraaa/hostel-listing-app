@@ -42,16 +42,16 @@ public class User {
     // -----------------------------------
     @JsonIgnore
     @ToString.Exclude
-    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY,cascade = CascadeType.ALL)
     private List<Review> reviews = new ArrayList<>();
 
     @JsonIgnore
     @ToString.Exclude
-    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "student", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Favorite> favorites = new ArrayList<>();
 
     @ToString.Exclude
-    @OneToOne(mappedBy = "student", fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "student", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Booking bookings;
 
     @ToString.Exclude
@@ -77,6 +77,16 @@ public class User {
     private LocalDate joiningDate;
     private LocalDateTime lastPaymentDate;
     
+    private String imageUrl;
+    
+    private String idUrl;
+    
+    private Boolean addedByOwner = false;
+    
     @Column(name = "is_active")
     private Boolean isActive = true; // default true
+    
+    // Notification relation
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Notification> notifications;
 }

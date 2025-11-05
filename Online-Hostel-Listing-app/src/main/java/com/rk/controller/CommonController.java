@@ -1,25 +1,31 @@
 package com.rk.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.service.annotation.PutExchange;
 
 import com.rk.dto.HostelDTO;
 import com.rk.dto.UserDTO;
-import com.rk.entity.Hostel;
+import com.rk.entity.Notification;
 import com.rk.entity.User;
+import com.rk.exception.AppException;
 import com.rk.repository.UserRepository;
 import com.rk.request.UpdateUserProfileRequest;
 import com.rk.service.HostelService;
 import com.rk.service.UserService;
+import com.rk.serviceImpl.NotificationService;
 
 import lombok.Data;
 
@@ -31,16 +37,24 @@ public class CommonController {
 	private final HostelService hostelService;
 	private final UserService userService;
 	private final UserRepository userRepository;
+	private final NotificationService notificationService;
 
 	@GetMapping("/fetch-hostels")
-	public ResponseEntity<?> getAllHostels() throws Exception{
-		List<HostelDTO> allHostels = hostelService.getAllHostels();
-		if(allHostels.isEmpty()) {
-			throw new Exception("hostel not found");
-		}
-		System.out.println("Hostels hai idhar");
-		return ResponseEntity.ok(allHostels);
+	public ResponseEntity<?> getAllHostels(
+	        @RequestParam(defaultValue = "0") int page,
+	        @RequestParam(defaultValue = "6") int size,
+	        @RequestParam(required = false) String sharingType) throws Exception {
+
+	    List<HostelDTO> allHostels = hostelService.getAllHostels(page, size, sharingType);
+
+	    Map<String, Object> response = new HashMap<>();
+	    response.put("content", allHostels);
+	    response.put("page", page);
+	    response.put("last", allHostels.size() < size); // ✅ last page condition
+
+	    return ResponseEntity.ok(response);
 	}
+
 	
 	@GetMapping("/user-profile")
 	public ResponseEntity<?> getUser(@RequestHeader("Authorization") String jwt) throws Exception{
@@ -69,9 +83,57 @@ public class CommonController {
 			user.setPhone(req.getPhone());
 		}
 		
+		if(req.getImageUrl() !=null) {
+			user.setImageUrl(req.getImageUrl());
+		}
+		
+		
+		if(req.getIdUrl()!=null) {
+			user.setIdUrl(req.getIdUrl());
+		}
+		
+		
 		User save = userRepository.save(user);
-		return ResponseEntity.ok(save);
+		
+		UserDTO dto = UserDTO.builder().id(save.getId()).email(save.getEmail())
+				.imageUrl(save.getImageUrl()!=null ? save.getImageUrl() : null)
+				.idUrl(save.getIdUrl()!=null ? save.getIdUrl() : null)
+		.hostelId(save.getHostels() != null ? save.getHostels().getId() : null).fullName(save.getFullName())
+		.phone(save.getPhone()).role(save.getRole()).build();
+		
+		
+		return ResponseEntity.ok(dto);
 		
 	}
+	
+	
+	@GetMapping("/fetch-notification")
+	public ResponseEntity<?> getNotifications(@RequestParam String email) throws Exception{ 
+		Optional<User> byEmail = userService.findByEmail(email);
+		
+		if(byEmail.isEmpty()) throw new AppException("invalid email");
+		
+		User user = byEmail.get();
+		
+		List<Notification> notifications = notificationService.getNotificationsForUser(user);
+		
+		return ResponseEntity.ok(notifications);
+		
+	}
+	
+	
+	@PatchMapping("/{id}/read")
+	public ResponseEntity<?> markAsRead(@PathVariable Long id)throws AppException{
+		Notification markAsRead = notificationService.markAsRead(id);
+		return ResponseEntity.ok(markAsRead);
+	}
+	
+	
+	@PatchMapping("/read-all")
+	public ResponseEntity<?>  markAllAsRead(@RequestParam String email){
+		List<Notification> markAllAsRead = notificationService.markAllAsRead(email);
+		return ResponseEntity.ok(markAllAsRead);
+	}
+	
 	
 }

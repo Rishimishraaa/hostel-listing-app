@@ -30,28 +30,28 @@ public class PaymentController {
 		return ResponseEntity.ok("hello dued");
 	}
 	
-	@PostMapping("/create-checkout-session/{paymentId}")
-	public ResponseEntity<?> createCheckoutSession(@PathVariable Long paymentId) throws Exception{
-		System.out.println("paymentId is : "+paymentId);
-		PaymentResponse paymentLink = paymentService.createPaymentLink(paymentId);
-		return ResponseEntity.ok(paymentLink);
-	}
-
+	/*	@PostMapping("/create-checkout-session/{paymentId}")
+		public ResponseEntity<?> createCheckoutSession(@PathVariable Long paymentId) throws Exception{
+			System.out.println("paymentId is : "+paymentId);
+			PaymentResponse paymentLink = paymentService.createPaymentLink(paymentId);
+			return ResponseEntity.ok(paymentLink);
+		}
 	
-	@PostMapping("/webhook")
-	public ResponseEntity<String> stripeWebhook(
-	        @RequestBody String payload, 
-	        @RequestHeader("Stripe-Signature") String sigHeader) {
-	    try {
-	        String handleStripeWebhook = paymentService.handleStripeWebhook(payload, sigHeader);
-	        System.out.println(handleStripeWebhook);
-
-	        return ResponseEntity.ok("success");
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("failure");
-	    }
-	}
+		
+		@PostMapping("/webhook")
+		public ResponseEntity<String> stripeWebhook(
+		        @RequestBody String payload, 
+		        @RequestHeader("Stripe-Signature") String sigHeader) {
+		    try {
+		        String handleStripeWebhook = paymentService.handleStripeWebhook(payload, sigHeader);
+		        System.out.println(handleStripeWebhook);
+	
+		        return ResponseEntity.ok("success");
+		    } catch (Exception e) {
+		        e.printStackTrace();
+		        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("failure");
+		    }
+		}*/
 	
 	
 	

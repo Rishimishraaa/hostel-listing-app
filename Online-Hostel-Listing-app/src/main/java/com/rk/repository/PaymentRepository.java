@@ -27,4 +27,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long>{
 	     boolean existsByStudentAndMonthAndYear(@Param("studentId") Long studentId,
 	                                            @Param("month") int month,
 	                                            @Param("year") int year);
+	    
+	    
+	    @Query("""
+	            SELECT COALESCE(SUM(p.amount), 0)
+	            FROM Payment p
+	            WHERE p.booking.hostel.owner.email = :ownerEmail
+	        """)
+	        Double findTotalEarningsByOwnerEmail(@Param("ownerEmail") String ownerEmail);
 }

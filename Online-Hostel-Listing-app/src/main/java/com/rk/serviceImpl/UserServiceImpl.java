@@ -28,6 +28,7 @@ import com.rk.entity.ReviewCategory;
 import com.rk.entity.Room;
 import com.rk.entity.RoomType;
 import com.rk.entity.User;
+import com.rk.exception.AppException;
 import com.rk.repository.BookingRepository;
 import com.rk.repository.FavoriteRepository;
 import com.rk.repository.HostelRepository;
@@ -55,13 +56,15 @@ public class UserServiceImpl implements UserService {
 	private final HostelServiceImpl hostelServiceImpl;
 	private final FavoriteRepository favoriteRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final NotificationService notificationService;
 
 	@Override
-	public UserDTO getUser(String jwt) throws Exception {
+	public UserDTO getUser(String jwt) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
 		User user = userRepository.findByEmail(username).orElseThrow(() -> new RuntimeException("user not found"));
-		return UserDTO.builder().id(user.getId()).email(user.getEmail())
+		return UserDTO.builder().imageUrl(user.getImageUrl() != null ? user.getImageUrl() : null)
+				.idUrl(user.getIdUrl() != null ? user.getIdUrl() : null).id(user.getId()).email(user.getEmail())
 				.hostelId(user.getHostels() != null ? user.getHostels().getId() : null).fullName(user.getFullName())
 				.phone(user.getPhone()).role(user.getRole()).build();
 
@@ -80,8 +83,8 @@ public class UserServiceImpl implements UserService {
 
 		Booking bookings = bookingRepository.findByStudentId(user.getId());
 		if (!ObjectUtils.isEmpty(bookings)) {
-			throw new RuntimeException(
-					"You have already booked in " + bookings.getHostel().getName() + " please delete current booking and try again!");
+			throw new RuntimeException("You have already booked in " + bookings.getHostel().getName()
+					+ " please delete current booking and try again!");
 		}
 
 		Booking booking1 = Booking.builder().hostel(hostel).student(user).status("PENDING")
@@ -92,14 +95,24 @@ public class UserServiceImpl implements UserService {
 		user.setBookings(bookings);
 		user.setHostels(hostel);
 		user.setJoiningDate(save.getStartDate().toLocalDate());
+		user.setAddedByOwner(false);
 		User save2 = userRepository.save(user);
 
+		User owner = userRepository.findById(hostel.getOwner().getId())
+				.orElseThrow(() -> new AppException("owner not found for this hostel"));
+
+		notificationService.createNotification(save2, "Your booking created successfully!");
+		notificationService.createNotification(owner, "You have 1 pending student request. Please confirm!");
+
 		return BookingDTO.builder().id(booking1.getId()).startDate(booking1.getStartDate()).hostelId(hostel.getId())
-				.status(booking1.getStatus()).studentId(save2.getId()).roomTypeId(roomType.getId()).build();
+				.status(booking1.getStatus()).studentId(save2.getId()).roomTypeId(roomType.getId())
+				.requirement("Requirement: "+roomType.getSharingType()+" Sharing Room")
+				
+				.build();
 	}
 
 	@Override
-	public RatingDTO addRating(HostelRatingRequest req) throws Exception {
+	public RatingDTO addRating(HostelRatingRequest req) throws AppException {
 
 		Hostel hostel = hostelRepository.findById(req.getHostelId())
 				.orElseThrow(() -> new RuntimeException("invalid hostel id"));
@@ -107,12 +120,14 @@ public class UserServiceImpl implements UserService {
 		User user = userRepository.findById(req.getStudentId())
 				.orElseThrow(() -> new RuntimeException("invalid user id"));
 
-		Optional<Rating> r = ratingRepository.findByStudentIdAndHostelIdAndCategory(user.getId(), hostel.getId(), ReviewCategory.valueOf( req.getCategory()));
-		
-		if(r.isPresent()) {
-			throw new RuntimeException("Rating already given by you! With Type "+req.getCategory()+" Try another category");
+		Optional<Rating> r = ratingRepository.findByStudentIdAndHostelIdAndCategory(user.getId(), hostel.getId(),
+				ReviewCategory.valueOf(req.getCategory()));
+
+		if (r.isPresent()) {
+			throw new RuntimeException(
+					"Rating already given by you! With Type " + req.getCategory() + " Try another category");
 		}
-		
+
 		Rating rating = new Rating();
 		rating.setCategory(ReviewCategory.valueOf(req.getCategory()));
 		rating.setCreatedAt(LocalDateTime.now());
@@ -137,14 +152,15 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public BookingDTO getBookings(String jwt) throws Exception {
+	public BookingDTO getBookings(String jwt) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
 		User user = userRepository.findByEmail(username).orElseThrow(() -> new RuntimeException("invalid user"));
 
 		Booking b = bookingRepository.findByStudentId(user.getId());
-		
-		if(b==null) throw new RuntimeException("booking not found");
+
+		if (b == null)
+			throw new RuntimeException("booking not found");
 
 		Hostel h = b.getHostel();
 		User student = b.getStudent();
@@ -159,15 +175,9 @@ public class UserServiceImpl implements UserService {
 				.build();
 		RoomDTO roomDTO = null;
 		if (room != null) {
-			roomDTO = RoomDTO.builder().id(room.getId())
-					.roomNumber(room.getRoomNumber())
-					.capacity(room.getCapacity())
-					.floorId(room.getFloor()
-							.getId())
-					.floorNumber(room.getFloorNumber())
-					.occupants(room.getOccupacy())
-					.roomTypeId(room.getRoomType().getId())
-					.build();
+			roomDTO = RoomDTO.builder().id(room.getId()).roomNumber(room.getRoomNumber()).capacity(room.getCapacity())
+					.floorId(room.getFloor().getId()).floorNumber(room.getFloorNumber()).occupants(room.getOccupacy())
+					.roomTypeId(room.getRoomType().getId()).build();
 		}
 
 		RoomTypeDTO roomTypeDTO = RoomTypeDTO.builder().id(roomType.getId()).sharingType(roomType.getSharingType())
@@ -175,39 +185,26 @@ public class UserServiceImpl implements UserService {
 				.pricePerMonth(roomType.getPricePerMonth()).build();
 
 		List<PaymentDTO> list = payments.stream().map(pay -> {
-			return PaymentDTO.builder()
-					.id(pay.getId())
-					.amount(pay.getAmount())
-					.bookingId(pay.getBooking().getId())
+			return PaymentDTO.builder().id(pay.getId()).amount(pay.getAmount()).bookingId(pay.getBooking().getId())
 					.month(pay.getMonth().toString())
 					.paidOn(pay.getPaidOn() != null ? pay.getPaidOn().toString() : null)
 					.studentName(student.getFullName()).studentId(student.getId()).status(pay.getStatus())
 					.room(room != null ? room.getRoomNumber() : null).phone(student.getPhone()).build();
 		}).toList();
 
-		return BookingDTO
-				.builder()
-				.id(b.getId())
-				.hostel(hostelDto)
-				.startDate(b.getStartDate())
-				.endDate(b.getEndDate())
-				.room(roomDTO)
-				.roomType(roomTypeDTO)
-				.student(userDTO)
-				.status(b.getStatus())
-				.payments(list)
-				.build();
+		return BookingDTO.builder().id(b.getId()).hostel(hostelDto).startDate(b.getStartDate()).endDate(b.getEndDate())
+				.room(roomDTO).roomType(roomTypeDTO).student(userDTO).status(b.getStatus()).payments(list).build();
 	}
 
 	@Override
-	public List<PaymentDTO> getAllPayments(String jwt)throws Exception {
+	public List<PaymentDTO> getAllPayments(String jwt) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
 		User user = userRepository.findByEmail(username).orElseThrow(() -> new RuntimeException("Invalid user id"));
 
 		Booking booking = bookingRepository.findByStudentId(user.getId());
 
-		if(booking==null) {
+		if (booking == null) {
 			throw new RuntimeException("booking not available");
 		}
 		List<Payment> payments = booking.getPayments();
@@ -216,7 +213,7 @@ public class UserServiceImpl implements UserService {
 			return PaymentDTO.builder().id(p.getId()).amount(p.getAmount()).bookingId(booking.getId())
 					.hostelName(booking.getHostel().getName()).month(p.getMonth().toString())
 					.studentName(booking.getStudent().getFullName()).phone(booking.getStudent().getPhone())
-					.status(p.getStatus()).room(booking.getRoom()!=null ? booking.getRoom().getRoomNumber(): null)
+					.status(p.getStatus()).room(booking.getRoom() != null ? booking.getRoom().getRoomNumber() : null)
 					.paidOn(p.getPaidOn() != null ? p.getPaidOn().toString() : null).build();
 
 		}).filter(Objects::nonNull).toList();
@@ -225,7 +222,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public List<RatingDTO> fetchAllRatings(String jwt)throws Exception {
+	public List<RatingDTO> fetchAllRatings(String jwt) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
 		User user = userRepository.findByEmail(username).orElseThrow(() -> new RuntimeException("Invalid user id"));
@@ -242,18 +239,17 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public FavoriteDTO addToFavorite(String jwt, Long hostelId)throws Exception {
+	public FavoriteDTO addToFavorite(String jwt, Long hostelId) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
 		User user = userRepository.findByEmail(username).orElseThrow(() -> new RuntimeException("Invalid user id"));
 
-		
 		Hostel hostel = hostelRepository.findById(hostelId)
 				.orElseThrow(() -> new RuntimeException("invalid hostel id!"));
-		
+
 		Favorite myfav = favoriteRepository.findByStudentIdAndHostelId(user.getId(), hostelId);
-		
-		if(myfav!=null) {
+
+		if (myfav != null) {
 			throw new RuntimeException("favorite already happend!");
 		}
 
@@ -278,7 +274,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public List<FavoriteDTO> fetchAllFavorite(String jwt) throws Exception{
+	public List<FavoriteDTO> fetchAllFavorite(String jwt) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
 		User user = userRepository.findByEmail(username).orElseThrow(() -> new RuntimeException("Invalid user id"));
@@ -286,16 +282,14 @@ public class UserServiceImpl implements UserService {
 		List<Favorite> fav = favoriteRepository.findByStudentId(user.getId());
 		return fav.stream().map(f -> {
 			HostelDTO HostelDto = adminServiceImpl.convertHostelToDto(f.getHostel());
-			return FavoriteDTO.builder().id(f.getId()).createdAt(f.getCreatedAt())
-					.hostelId(HostelDto.getId())
-					.hostel(HostelDto)
-					.studentId(user.getId()).build();
+			return FavoriteDTO.builder().id(f.getId()).createdAt(f.getCreatedAt()).hostelId(HostelDto.getId())
+					.hostel(HostelDto).studentId(user.getId()).build();
 		}).toList();
 
 	}
 
 	@Override
-	public Long removeToFavorite(String jwt, Long hostelId)throws Exception {
+	public Long removeToFavorite(String jwt, Long hostelId) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
 		User user = userRepository.findByEmail(username).orElseThrow(() -> new RuntimeException("Invalid user id"));
@@ -305,41 +299,42 @@ public class UserServiceImpl implements UserService {
 			throw new RuntimeException("favorite not found");
 		List<Favorite> favorites = user.getFavorites();
 		favorites.remove(favorite);
-		
+
 		userRepository.save(user);
 
 		favoriteRepository.delete(favorite);
-		
+
 		return favorite.getId();
 	}
-	
-	
-	public Optional<User> findByEmail(String email)throws Exception{
+
+	public Optional<User> findByEmail(String email) throws AppException {
 		return userRepository.findByEmail(email);
 	}
-	
-	public Optional<User> findByPhone(String phone)throws Exception{
+
+	public Optional<User> findByPhone(String phone) throws AppException {
 		return userRepository.findByPhone(phone);
-		}
-	
+	}
+
 	@Override
-	public void updatePasswordByEmail(String email, String rawPassword)throws Exception {
+	public void updatePasswordByEmail(String email, String rawPassword) throws AppException {
+
 		userRepository.findByEmail(email).ifPresent(u -> {
 			u.setPassword(passwordEncoder.encode(rawPassword));
 			userRepository.save(u);
-			});
+
+		});
+
+		User user = userRepository.findByEmail(email).orElseThrow(() -> new AppException("Invalid Identity"));
+		notificationService.createNotification(user, "Your password updated!");
+
 	}
-	
+
 	@Override
-	public void updatePasswordByPhone(String phone, String rawPassword) throws Exception{
+	public void updatePasswordByPhone(String phone, String rawPassword) throws AppException {
 		userRepository.findByEmail(phone).ifPresent(u -> {
 			u.setPassword(passwordEncoder.encode(rawPassword));
 			userRepository.save(u);
-			});
+		});
 	}
-	
-	
-	
-	
 
 }

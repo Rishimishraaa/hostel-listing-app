@@ -21,7 +21,7 @@ public interface HostelService {
 	
 	public List<FloorDTO> fetchAllFloors(Long hostelId) throws Exception;
 	public List<RoomDTO> fetchAllRooms(Long hostelId) throws Exception;
-	public List<HostelDTO> getAllHostels() throws Exception;
+	public List<HostelDTO> getAllHostels(int page, int size,String sharingType) throws Exception;
 	public List<RoomTypeDTO> getAllRoomTypeByHostelId(Long hostelId)throws Exception;
 
 

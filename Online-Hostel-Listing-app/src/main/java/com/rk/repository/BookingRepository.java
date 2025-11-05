@@ -39,4 +39,32 @@ public interface BookingRepository extends JpaRepository<Booking, Long>{
            "AND (b.endDate IS NULL OR b.endDate >= :date) " +
            "AND b.startDate <= :date")
     List<Booking> findActiveBookingsAt(@Param("date") LocalDate date);
+    
+    
+    @Query("""
+    	    SELECT 
+    	        FUNCTION('MONTHNAME', MIN(b.startDate)) AS monthName,
+    	        FUNCTION('YEAR', MIN(b.startDate)) AS year,
+    	        COUNT(b.id) AS bookingCount
+    	    FROM Booking b
+    	    WHERE b.hostel.owner.email = :ownerEmail
+    	    GROUP BY FUNCTION('YEAR', b.startDate), FUNCTION('MONTH', b.startDate)
+    	    ORDER BY year ASC, FUNCTION('MONTH', b.startDate) ASC
+    	""")
+    	List<Object[]> getMonthlyBookingCount(@Param("ownerEmail") String ownerEmail);
+
+    	 @Query("""
+    		        SELECT COUNT(DISTINCT b.student.id)
+    		        FROM Booking b
+    		        WHERE b.hostel.owner.email = :ownerEmail
+    		    """)
+    		    Long countUsersByOwnerEmail(@Param("ownerEmail") String ownerEmail);
+    	 
+    	 
+    	 @Query("""
+ 	            SELECT COALESCE(SUM(b.totalAmount), 0)
+ 	            FROM Booking b
+ 	            WHERE b.hostel.owner.email = :ownerEmail
+ 	        """)
+ 	        Double findTotalEarningsByOwnerEmail(@Param("ownerEmail") String ownerEmail);
 }

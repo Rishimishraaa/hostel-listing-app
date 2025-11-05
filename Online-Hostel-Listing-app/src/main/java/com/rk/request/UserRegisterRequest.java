@@ -11,4 +11,6 @@ public class UserRegisterRequest {
 	private String phone;
 	private String password;
 	private Role role;
+	private String imageUrl;
+	private String idUrl;
 }

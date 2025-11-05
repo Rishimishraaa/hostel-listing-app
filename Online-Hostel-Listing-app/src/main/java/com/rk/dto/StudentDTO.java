@@ -23,4 +23,5 @@ public class StudentDTO {
     private String lastPaymentDate;
     private Long hostelId;
     private Long roomId;
+    private String imageUrl;
 }

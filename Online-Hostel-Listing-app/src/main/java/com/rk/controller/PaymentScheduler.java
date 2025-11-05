@@ -21,10 +21,10 @@ public class PaymentScheduler {
 
 	private final BookingRepository bookingRepository;
 	private final PaymentService paymentService;
-	private final PaymentRepository paymentRepository;
 	
 	  // Run every day at 1 AM
-	@Scheduled(cron = "0 0 1 * * *") // हर दिन सुबह 1 बजे check
+	//@Scheduled(cron = "0 0 1 * * *") // every morning 1 O'clock check
+	@Scheduled(cron = "0 * * * * *")
 	public void generateMonthlyPayments() {
 		
 		LocalDate today = LocalDate.now();

@@ -22,11 +22,12 @@ public class PaymentService {
 
 	private final UserRepository userRepository;
 	private final PaymentRepository paymentRepository;
+	private final NotificationService notificationService;
 
 	
 	@Transactional
 	public void createMonthlyPayment(Booking booking, LocalDate monthDate) {
-	    if (booking.getStudent() == null || !booking.getStudent().getIsActive()) {
+	    if (booking.getStudent() == null || !booking.getStudent().getIsActive() || !booking.getStatus().equals("CONFIRMED")) {
 	        return; // skip this booking
 	    }
 	    
@@ -50,6 +51,10 @@ public class PaymentService {
 	    	student.setPaymentStatus("PENDING");
 	    	student.setLastPaymentDate(null);
 	    	userRepository.save(student);
+	    	
+	    	notificationService.createNotification(student, "Your payment is pending. Please pay before due date. "
+	    			+ "\n Your due date is : "+payment.getMonth().plusDays(5)+"\n"
+	    					+ " and ammount is : "+payment.getAmount());
 	    	
 	    }
 

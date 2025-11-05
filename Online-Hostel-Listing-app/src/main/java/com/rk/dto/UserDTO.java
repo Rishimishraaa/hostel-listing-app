@@ -26,4 +26,6 @@ public class UserDTO {
 	    private List<BookingDTO> bookings;
 	    private Long hostelId;
 	    private List<RatingDTO> ratings;
+	    private String imageUrl;
+	    private String idUrl;
 }

@@ -32,4 +32,5 @@ public class BookingDTO {
 	    private RoomDTO room;
 	    private UserDTO student;
 	    private List<PaymentDTO> payments;
+	    private String requirement;
 }

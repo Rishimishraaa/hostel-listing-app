@@ -10,30 +10,31 @@ import com.rk.dto.RoomTypeDTO;
 import com.rk.dto.StudentDTO;
 import com.rk.entity.Hostel;
 import com.rk.entity.RoomType;
+import com.rk.exception.AppException;
 import com.rk.request.AddPaymentRequest;
 import com.rk.request.StudentBookingRequest;
 import com.rk.response.MessageResponse;
 
 public interface AdminService {
 
-	HostelDTO getHostelsByOwnerId(Long hostelId) throws Exception;
-	public HostelDTO createHostel(Hostel hostel, String jwt)throws Exception;
-	public HostelDTO updateHostel(HostelDTO dto, String jwt) throws Exception;
-	public MessageResponse updateHostelStatus(Long hostelId) throws Exception;
+	HostelDTO getHostelsByOwnerId(Long hostelId) throws AppException;
+	public HostelDTO createHostel(Hostel hostel, String jwt)throws AppException;
+	public HostelDTO updateHostel(HostelDTO dto, String jwt) throws AppException;
+	public MessageResponse updateHostelStatus(Long hostelId) throws AppException;
 	public FloorDTO createFloor(FloorDTO floor);
-	public RoomTypeDTO createRoomTypeInHostel(RoomType room,Long hostelId, String jwt) throws Exception;
-	public RoomTypeDTO updateRoomType(Long roomId, RoomTypeDTO room)throws Exception;
-	public MessageResponse deleteRoomType(Long roomId) throws Exception;
-	public RoomDTO createRoom(RoomDTO dto)throws Exception;
-	public StudentDTO addStudentInHostel(StudentBookingRequest request) throws Exception;	
-	public MessageResponse removeStudentFromHostel(Long userId)throws Exception;
-	public List<StudentDTO> getAllStudentInHostels(Long hostelId) throws Exception;
-	public List<PaymentDTO> getPaymentsForHostel(Long hostelId) throws Exception;
-	public MessageResponse confermStudentPayment(Long paymentId)throws Exception;
-	public PaymentDTO AddStudentPayment(AddPaymentRequest request) throws Exception;
-	public List<BookingDTO> getAllStudentBookings(Long hostelId)throws Exception;
-	public void confermStudentBooking(Long bookingId)throws Exception;
-	public void removeStudentBooking(Long bookingId)throws Exception;
-	public RoomDTO asignRoomToStudent(Long bookingId, Long roomId)throws Exception;
+	public RoomTypeDTO createRoomTypeInHostel(RoomType room,Long hostelId, String jwt) throws AppException;
+	public RoomTypeDTO updateRoomType(Long roomId, RoomTypeDTO room)throws AppException;
+	public MessageResponse deleteRoomType(Long roomId) throws AppException;
+	public RoomDTO createRoom(RoomDTO dto)throws AppException;
+	public StudentDTO addStudentInHostel(StudentBookingRequest request) throws AppException;	
+	public MessageResponse removeStudentFromHostel(Long userId)throws AppException;
+	public List<StudentDTO> getAllStudentInHostels(Long hostelId) throws AppException;
+	public List<PaymentDTO> getPaymentsForHostel(Long hostelId) throws AppException;
+	public MessageResponse confermStudentPayment(Long paymentId)throws AppException;
+	public PaymentDTO AddStudentPayment(AddPaymentRequest request)throws AppException;
+	public List<BookingDTO> getAllStudentBookings(Long hostelId)throws AppException;
+	public void confermStudentBooking(Long bookingId)throws AppException;
+	public void removeStudentBooking(Long bookingId)throws AppException;
+	public RoomDTO asignRoomToStudent(Long bookingId, Long roomId)throws AppException;
 
 }

@@ -34,13 +34,7 @@ public class SecurityConfig {
 		return new BCryptPasswordEncoder();
 	}
 	
-	@Bean
-	AuthenticationProvider authenticationProvider(PasswordEncoder encoder) {
-		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-		provider.setUserDetailsService(userDetailsService);
-		provider.setPasswordEncoder(encoder);
-		return provider;
-	}
+
 	
 	@Bean
 	AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
@@ -57,8 +51,7 @@ public class SecurityConfig {
 			.requestMatchers("/api/student/**").hasAuthority("STUDENT")
 			.anyRequest().authenticated()
 				)
-				.authenticationProvider(authenticationProvider(encoder))
-				
+			
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.addFilterBefore(jwtFilter,UsernamePasswordAuthenticationFilter.class)
 				.cors(cors->cors.configurationSource(corsConfigurationSource()))
@@ -72,13 +65,11 @@ public class SecurityConfig {
 	            public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
 	                CorsConfiguration cfg = new CorsConfiguration();
 	                cfg.setAllowedOrigins(Arrays.asList(
-	                        "http://localhost:3000","http://localhost:5173",
+	                        "http://localhost:5173",
+	                        "http://192.168.32.1:5173",
 	                        "http://192.168.43.110:5173",
-	                        "http://192.168.1.3:5173",
-	                        "http://192.168.1.11:5173"
-	                       
-	                 
-	                     
+	                        "http://192.168.1.16:5173"
+	                        
 	                ));
 	                cfg.setAllowedMethods(Collections.singletonList("*"));
 	                cfg.setAllowCredentials(true);
