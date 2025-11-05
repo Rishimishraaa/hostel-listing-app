@@ -1,26 +1,23 @@
 # Use official OpenJDK 17 image
 FROM eclipse-temurin:17-jdk
 
+# Install Maven
+RUN apt-get update && apt-get install -y maven
+
 # Set working directory
 WORKDIR /app
-
-# Copy only Maven wrapper and pom.xml first (for caching)
-COPY Online-Hostel-Listing-app/mvnw Online-Hostel-Listing-app/.mvn/ pom.xml ./
 
 # Copy the entire project
 COPY . .
 
-# Move into the app folder
+# Move into your Spring Boot app directory
 WORKDIR /app/Online-Hostel-Listing-app
 
-# Give permission to mvnw
-RUN chmod +x mvnw
+# Build the Spring Boot JAR
+RUN mvn clean package -DskipTests
 
-# Build the app
-RUN ./mvnw clean package -DskipTests
-
-# Expose Spring Boot port
+# Expose port 8080
 EXPOSE 8080
 
-# Run the Spring Boot JAR
+# Run the JAR file
 CMD ["java", "-jar", "target/Online-Hostel-Listing-app-0.0.1-SNAPSHOT.jar"]
