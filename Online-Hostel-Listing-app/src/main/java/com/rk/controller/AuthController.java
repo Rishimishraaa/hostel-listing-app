@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.rk.config.CustomUserDetailsService;
 import com.rk.config.JwtService;
+import com.rk.entity.Gender;
 import com.rk.entity.Role;
 import com.rk.entity.User;
 import com.rk.exception.AppException;
@@ -64,18 +65,20 @@ public class AuthController {
 			throw new AppException("email already exists!");
 		}
 
-		if (byPhone.isPresent())
+		if (byPhone.isPresent()) {
 			throw new AppException("mobile no already exists");
-
+		}
+		
 		User user = User.builder().fullName(request.getFullName()).isActive(true)
 
 				.email(request.getEmail()).phone(request.getPhone()).role(request.getRole())
+				.gender(Gender.valueOf(request.getGender()))
 				.password(passwordEncoder.encode(request.getPassword()))
 				.imageUrl(request.getImageUrl() != null ? request.getIdUrl() : null)
 				.idUrl(request.getIdUrl() != null ? request.getIdUrl() : null).ratingsGiven(new ArrayList<>())
 				.reviews(new ArrayList<>()).favorites(new ArrayList<>()).build();
 
-		User save = userRepo.save(user);
+		userRepo.save(user);
 		return ResponseEntity.ok("register successfully");
 	}
 
@@ -83,13 +86,10 @@ public class AuthController {
 	public ResponseEntity<?> login(@RequestBody UserLoginRequest request) throws Exception {
 		AuthResponse response = new AuthResponse();
 		try {
-
 			Authentication authentication = authenticationManager
 					.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 			UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-
 			Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-
 			String role = authorities.isEmpty() ? null : authorities.iterator().next().getAuthority();
 
 			String jwt = jwtService.generateToken(userDetails);
@@ -100,10 +100,8 @@ public class AuthController {
 			response.setUsername(userDetails.getUsername());
 
 		} catch (Exception e) {
-
 			throw new BadCredentialsException("invalid credentials");
 		}
-
 		return new ResponseEntity<AuthResponse>(response, HttpStatus.OK);
 	}
 

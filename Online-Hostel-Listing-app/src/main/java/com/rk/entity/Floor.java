@@ -35,5 +35,5 @@ public class Floor {
 	
 
 	@OneToMany(mappedBy = "floor", cascade = CascadeType.ALL)
-	private List<Room> rooms=new ArrayList<>();
+	private List<Room> rooms =new ArrayList<>();
 }

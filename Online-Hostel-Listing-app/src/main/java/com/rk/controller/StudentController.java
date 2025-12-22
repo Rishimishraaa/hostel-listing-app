@@ -2,6 +2,7 @@ package com.rk.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,16 +61,29 @@ public class StudentController {
 	}
 	
 	@GetMapping("/fetch-rating")
-	public ResponseEntity<?> fetchRating(@RequestHeader("Authorization") String jwt) throws Exception{
+	public ResponseEntity<List<RatingDTO>> fetchRating(@RequestHeader("Authorization") String jwt) throws Exception{
 		
 		List<RatingDTO> fetchAllRatings = userService.fetchAllRatings(jwt);
 		
 		return ResponseEntity.ok(fetchAllRatings);
 	}
 	
+	@GetMapping("/delete-rating/{id}")
+	public ResponseEntity<String> deleteRating(@PathVariable Long id) throws Exception{
+		String deleteRating = userService.deleteRating(id);
+		return new ResponseEntity<String>(deleteRating,HttpStatus.OK);
+	}
+	
+	@PostMapping("/update-rating")
+	public ResponseEntity<RatingDTO> updateRating(@RequestBody RatingDTO dto) throws Exception{
+		System.out.println(dto.getId());
+		RatingDTO updateRating = userService.updateRating(dto);
+		return ResponseEntity.ok(updateRating);
+	}
+	
 	
 	@GetMapping("/add-favorite/{hostelId}")
-	public ResponseEntity<?> addToFavorite(@RequestHeader("Authorization") String jwt, @PathVariable Long hostelId) throws Exception{
+	public ResponseEntity<FavoriteDTO> addToFavorite(@RequestHeader("Authorization") String jwt, @PathVariable Long hostelId) throws Exception{
 		FavoriteDTO toFavorite = userService.addToFavorite(jwt, hostelId);
 		return ResponseEntity.ok(toFavorite);
 	}
@@ -79,10 +93,9 @@ public class StudentController {
 		return ResponseEntity.ok(userService.fetchAllFavorite(jwt));
 	}
 	
-	@GetMapping("/remove-favorite/{hostelId}")
-	public ResponseEntity<?> removeToFavorite(@RequestHeader("Authorization") String jwt, @PathVariable Long hostelId) throws Exception{
-	
-			Long id = userService.removeToFavorite(jwt, hostelId);
+	@GetMapping("/remove-favorite/{id}")
+	public ResponseEntity<?> removeToFavorite(@RequestHeader("Authorization") String jwt, @PathVariable Long id) throws Exception{
+			 userService.removeToFavorite(jwt, id);
 			return ResponseEntity.ok(id);
 		
 	

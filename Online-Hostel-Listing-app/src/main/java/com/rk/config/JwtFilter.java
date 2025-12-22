@@ -3,7 +3,9 @@ package com.rk.config;
 import java.io.IOException;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -22,7 +24,6 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtFilter extends OncePerRequestFilter{
 	
 	private final JwtService jwtService;
-	private final UserDetailsService userDetailsService;
 	
 	
 	
@@ -30,7 +31,6 @@ public class JwtFilter extends OncePerRequestFilter{
 	public JwtFilter(JwtService jwtService, UserDetailsService userDetailsService) {
 		super();
 		this.jwtService = jwtService;
-		this.userDetailsService = userDetailsService;
 	}
 
 
@@ -50,6 +50,7 @@ public class JwtFilter extends OncePerRequestFilter{
 		final String authHeader = request.getHeader("Authorization");
 		final String jwt;
 		final String username;
+		final String role;
 		
 		
 		// 2. header check
@@ -64,11 +65,17 @@ public class JwtFilter extends OncePerRequestFilter{
 		try {
 			// 3. extract username from token
 			username = jwtService.extractUsername(jwt);
+			role = jwtService.extractRole(jwt);
 			
 			// 4. agar username mila aur context empty hai
 			
 			if(username !=null && SecurityContextHolder.getContext().getAuthentication()==null) {
-				UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+				SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
+	
+				UserDetails userDetails = User.withUsername(username)
+				.password("")
+				.authorities(authority)
+				.build();
 				
 				if(jwtService.isTokenValid(jwt, userDetails)) {
 					UsernamePasswordAuthenticationToken authToken = new
@@ -84,14 +91,39 @@ public class JwtFilter extends OncePerRequestFilter{
 			
 		}
 		catch (ExpiredJwtException e) {
-			System.out.println("Expired jwt token :"+e.getMessage());
+		    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		    response.setContentType("application/json");
+		    response.getWriter().write("""
+		        {
+		          "error": "JWT_EXPIRED",
+		          "message": "Your session has expired. Please login again."
+		        }
+		    """);
+		    return;
 		}
+
 		catch (UnsupportedJwtException | MalformedJwtException e) {
-			System.out.println("Invalid Jwt : "+e.getMessage());
+		    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		    response.setContentType("application/json");
+		    response.getWriter().write("""
+		        {
+		          "error": "INVALID_JWT",
+		          "message": "Invalid authentication token."
+		        }
+		    """);
+		    return;
 		}
-		
+
 		catch (Exception e) {
-			System.out.println("Jwt Filter Error : "+e.getMessage());
+		    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		    response.setContentType("application/json");
+		    response.getWriter().write("""
+		        {
+		          "error": "AUTH_ERROR",
+		          "message": "Authentication failed."
+		        }
+		    """);
+		    return;
 		}
 		
 		

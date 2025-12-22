@@ -16,6 +16,7 @@ public class HostelDTO {
 	  private Long id;
 	    private String name;
 	    private boolean status;
+	    private String isApproved;
 	    private String description;
 	    private AddressDTO address;
 	    private ContactInformationDTO contactInfo;

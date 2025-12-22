@@ -1,5 +1,5 @@
 package com.rk.entity;
 
 public enum Role {
-	STUDENT, OWNER, ADMIN
+	STUDENT, OWNER, ADMIN,IAM
 }

@@ -1,6 +1,5 @@
 package com.rk.config;
 
-import java.io.Console;
 import java.util.Date;
 
 import org.springframework.security.core.GrantedAuthority;
@@ -35,6 +34,17 @@ public class JwtService {
 				.parseClaimsJws(token)
 				.getBody()
 				.getSubject();
+	}
+	
+	public String extractRole(String token) {
+		
+				String role  =(String) Jwts.parserBuilder()
+				.setSigningKey(Keys.hmacShaKeyFor(SECRETE_KEY.getBytes()))
+				.build()
+				.parseClaimsJws(token)
+				.getBody()
+				.get("role");
+				return role;
 	}
 	
 	public boolean isTokenValid(String token, UserDetails userDetails) {

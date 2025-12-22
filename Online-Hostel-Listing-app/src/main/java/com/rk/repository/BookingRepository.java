@@ -1,6 +1,7 @@
 package com.rk.repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,6 +28,19 @@ public interface BookingRepository extends JpaRepository<Booking, Long>{
     // Hostel id से सभी bookings निकालने के लिए
     List<Booking> findByHostelId(Long hostelId);
     
+    
+    // pending booking ke liye
+    @Query("""
+    	    SELECT COUNT(b)
+    	    FROM Booking b
+    	    WHERE b.hostel.id = :hostelId
+    	      AND b.status = :status
+    	""")
+    	Long findPendingBooking(
+    	        @Param("hostelId") Long hostelId,
+    	        @Param("status") String status
+    	);
+
    
     
     // Optional: particular room की bookings
@@ -67,4 +81,18 @@ public interface BookingRepository extends JpaRepository<Booking, Long>{
  	            WHERE b.hostel.owner.email = :ownerEmail
  	        """)
  	        Double findTotalEarningsByOwnerEmail(@Param("ownerEmail") String ownerEmail);
+    	 
+    	 
+    	 @Query("""
+    			    SELECT COUNT(b)
+    			    FROM Booking b
+    			    WHERE b.hostel.id = :hostelId
+    			      AND b.startDate BETWEEN :start AND :end
+    			""")
+    			Long countNewBookings(
+    			        @Param("hostelId") Long hostelId,
+    			        @Param("start") LocalDateTime start,
+    			        @Param("end") LocalDateTime end
+    			);
+
 }

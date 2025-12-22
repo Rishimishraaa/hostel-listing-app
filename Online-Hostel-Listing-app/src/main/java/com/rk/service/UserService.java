@@ -22,10 +22,12 @@ public interface UserService {
 	public List<RatingDTO> fetchAllRatings(String jwt)throws Exception;
 	public List<FavoriteDTO> fetchAllFavorite(String jwt)throws Exception;
 	public FavoriteDTO addToFavorite(String jwt, Long hostelId)throws Exception;
-	public Long removeToFavorite(String jwt, Long hostelId)throws Exception;
+	public Long removeToFavorite(String jwt, Long id)throws Exception;
 	public void updatePasswordByEmail(String email, String rawPassword)throws Exception;
 	public void updatePasswordByPhone(String phone, String rawPassword)throws Exception;
 	public Optional<User> findByEmail(String email)throws Exception;
 	public Optional<User> findByPhone(String phone)throws Exception;
+	public String deleteRating(Long id)throws Exception;
+	public RatingDTO updateRating(RatingDTO dto)throws Exception;
 	
 }

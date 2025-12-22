@@ -19,6 +19,7 @@ public class UserDTO {
 	    private String fullName;
 	    private String email;
 	    private String phone;
+	    private String gender;
 	    private Role role;
 	    
 	    private List<ReviewDTO> reviews;

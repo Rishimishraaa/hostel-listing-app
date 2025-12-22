@@ -2,5 +2,5 @@ package com.rk.entity;
 
 public enum Gender {
 
-	BOYS, GIRLS, COED
+	BOYS, GIRLS, COED,NOTDEFINE
 }

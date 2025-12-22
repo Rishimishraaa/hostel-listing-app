@@ -3,6 +3,7 @@ package com.rk.controller;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,7 +28,7 @@ public class PaymentScheduler {
 	@Scheduled(cron = "0 * * * * *")
 	public void generateMonthlyPayments() {
 		
-		LocalDate today = LocalDate.now();
+		LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
 		
 	    List<Booking> bookings = bookingRepository.findAllByIsActiveTrue();
 

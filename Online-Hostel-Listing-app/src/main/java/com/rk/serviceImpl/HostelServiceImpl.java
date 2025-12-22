@@ -1,11 +1,11 @@
 package com.rk.serviceImpl;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.rk.config.JwtService;
@@ -29,11 +29,11 @@ import com.rk.entity.ContactInformation;
 import com.rk.entity.Facilities;
 import com.rk.entity.Floor;
 import com.rk.entity.FoodInfo;
+import com.rk.entity.Gender;
 import com.rk.entity.Hostel;
 import com.rk.entity.HostelImage;
 import com.rk.entity.Policies;
 import com.rk.entity.Rating;
-import com.rk.entity.ReviewCategory;
 import com.rk.entity.Room;
 import com.rk.entity.RoomType;
 import com.rk.entity.RoomTypeImage;
@@ -47,6 +47,8 @@ import com.rk.repository.RoomTypeRepository;
 import com.rk.repository.UserRepository;
 import com.rk.service.HostelService;
 
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.transaction.Transactional;
 import lombok.Data;
 
@@ -64,22 +66,75 @@ public class HostelServiceImpl implements HostelService {
 	private final RatingRepository ratingRepository;
 
 	@Override
-	public List<HostelDTO> getAllHostels(int page, int size,String sharingType) throws Exception {
+	public List<HostelDTO> getFilteredHostels(Map<String, Object> filters) throws Exception {
+
 		
-		Pageable pageable = PageRequest.of(page, size);
-		Page<Hostel> all = hostelRepository.findAll(pageable);
-		System.out.println(page+"   "+size+"  "+sharingType);
-		if(sharingType!=null) {
-			List<Hostel> hostels= hostelRepository.findDistinctByRoomType_SharingType(Integer.parseInt(sharingType));
-			return hostels.stream().filter(x-> x.isStatus()).map(x -> convertHostelToDto(x)).toList();
-			
-		}
-		if(all.isEmpty()) {
-			throw new RuntimeException("hostel not found");
-		}
-		List<HostelDTO> list = all.stream().filter(x-> x.isStatus()).map(x -> convertHostelToDto(x)).toList();
-		return list;
+		 // 🔹 Convert gender string → Enum
+	    if (filters.containsKey("gender") && filters.get("gender") != null) {
+	        try {
+	            String g = filters.get("gender").toString().toUpperCase().trim();
+	            filters.put("gender", Gender.valueOf(g));
+	        } catch (Exception ex) {
+	            throw new IllegalArgumentException("Invalid gender value: " + filters.get("gender"));
+	        }
+	    }
+	    
+	    if (filters.get("rating") != null) {
+	        try {
+	            Double ratingValue = Double.valueOf(filters.get("rating").toString());
+	            filters.put("rating", ratingValue);
+	        } catch (Exception e) {
+	            throw new IllegalArgumentException("Invalid rating value");
+	        }
+	    }
+
+
+	    String sortBy = filters.get("sortBy").toString();
+	    String sortDir = filters.get("sortDir").toString();
+
+	    Sort sort = Sort.unsorted(); // default
+
+	    // NORMAL SORT IF COLUMN EXISTS IN HOSTEL ENTITY
+	    if (!sortBy.equals("pricePerMonth")) {
+	        sort = sortDir.equals("asc")
+	                ? Sort.by(sortBy).ascending()
+	                : Sort.by(sortBy).descending();
+	    }
+
+	    
+	    // FETCH FROM DB (filtered but unsorted if sorting = pricePerMonth)
+	    List<Hostel> result = hostelRepository.findAll(
+	            HostelSpecification.filter(filters),
+	            sort
+	    );
+
+	    // MANUAL SORT (ONLY FOR pricePerMonth)
+	    if (sortBy.equals("pricePerMonth")) {
+	        result.sort((h1, h2) -> {
+	            double p1 = h1.getRoomType().stream()
+	                    .mapToDouble(RoomType::getPricePerMonth)
+	                    .min().orElse(Double.MAX_VALUE);
+
+	            double p2 = h2.getRoomType().stream()
+	                    .mapToDouble(RoomType::getPricePerMonth)
+	                    .min().orElse(Double.MAX_VALUE);
+
+	            return sortDir.equals("asc")
+	                    ? Double.compare(p1, p2)
+	                    : Double.compare(p2, p1);
+	        });
+	    }
+	    
+	   
+
+	    // CONVERT TO DTO
+	    return result.stream()
+	            .map(this::convertHostelToDto)
+	            .collect(Collectors.toList());
 	}
+
+	
+
 
 	@Override
 	@Transactional
@@ -103,6 +158,7 @@ public class HostelServiceImpl implements HostelService {
 											std.getLastPaymentDate() != null ? std.getLastPaymentDate().toString()
 													: null)
 									.imageUrl(std.getImageUrl())
+									.idUrl(std.getIdUrl())
 									.build();
 						}).filter(Objects::nonNull).toList();
 
@@ -150,7 +206,7 @@ public class HostelServiceImpl implements HostelService {
 
 	}
 
-	private HostelDTO convertHostelToDto(Hostel h) {
+	public HostelDTO convertHostelToDto(Hostel h) {
 
 		if (h == null)
 			return null;
@@ -228,7 +284,7 @@ public class HostelServiceImpl implements HostelService {
 		}).toList();
 
 		HostelDTO hostelDTO = HostelDTO.builder().id(h.getId()).gender(h.getGender()).owner(userDTO).name(h.getName())
-				.status(h.isStatus()).description(h.getDescription()).address(addressDTO)
+				.status(h.isStatus()).isApproved(h.getIsApproved()).description(h.getDescription()).address(addressDTO)
 				.contactInfo(contactInformationDTO).policies(policiesDTO).facilities(facilitiesDTO).images(imageDto)
 				.ratings(ratingDto).foodInfo(foodInfoDTO).floors(roomTypeDto).ownerId(owner.getId()).roomTypes(rtdto)
 				.build();

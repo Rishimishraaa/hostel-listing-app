@@ -22,6 +22,7 @@ public class EmailService {
 		try {
 			MimeMessage message = mailSender.createMimeMessage();
 			MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+			String link = "https://hostelhub.online/reset-password?otp=" + otp + "&email=" + to;
 
 			String htmlMsg = "<!DOCTYPE html>" + "<html>" + "<head>" + "<meta charset='UTF-8'>"
 					+ "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
@@ -50,7 +51,7 @@ public class EmailService {
 
 					"            <p style='font-size:16px;'>Or click the button below to reset your password:</p>"
 					+ "            <div style='text-align:center; margin:20px 0;'>"
-					+ "              <a href='https://yourhostelhubapp.com/reset-password' "
+					+ "              <a href='"+link+"' "
 					+ "                 style='text-decoration:none; padding:12px 25px; background-color:#3b82f6; color:white; border-radius:8px; font-weight:bold; display:inline-block;'>Reset Password 🔒</a>"
 					+ "            </div>" +
 

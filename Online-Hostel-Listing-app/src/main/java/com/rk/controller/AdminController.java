@@ -44,47 +44,47 @@ public class AdminController {
 	private final DashboardService dashboardService;
 
 	@PostMapping("/create-hostel")
-	public ResponseEntity<?> createHostel(@RequestHeader("Authorization") String jwt, @RequestBody Hostel hostel)
+	public ResponseEntity<HostelDTO> createHostel(@RequestHeader("Authorization") String jwt, @RequestBody Hostel hostel)
 			throws Exception {
 		HostelDTO hostel2 = adminService.createHostel(hostel, jwt);
 		return ResponseEntity.ok(hostel2);
 	}
 
 	@PutMapping("/update-hostel")
-	public ResponseEntity<?> updateHostel(@RequestHeader("Authorization") String jwt, @RequestBody HostelDTO dto)
+	public ResponseEntity<HostelDTO> updateHostel(@RequestHeader("Authorization") String jwt, @RequestBody HostelDTO dto)
 			throws Exception {
 		HostelDTO updateHostel = adminService.updateHostel(dto, jwt);
 		return ResponseEntity.ok(updateHostel);
 	}
 
 	@GetMapping("/{hostelId}/fetch-hostel")
-	public ResponseEntity<?> fetchHostelByOwnerId(@PathVariable Long hostelId) throws Exception {
+	public ResponseEntity<HostelDTO> fetchHostelByOwnerId(@PathVariable Long hostelId) throws Exception {
 		HostelDTO hostelsByOwnerId = adminService.getHostelsByOwnerId(hostelId);
 		return ResponseEntity.ok(hostelsByOwnerId);
 	}
 
 	@GetMapping("/update-status/{hostelId}")
-	public ResponseEntity<?> updateHostelStatus(@PathVariable Long hostelId) throws Exception {
+	public ResponseEntity<MessageResponse> updateHostelStatus(@PathVariable Long hostelId) throws Exception {
 		MessageResponse res = adminService.updateHostelStatus(hostelId);
 		return ResponseEntity.ok(res);
 	}
 
 	@PostMapping("/create-roomtype/{hostelId}")
-	public ResponseEntity<?> createRoomType(@RequestHeader("Authorization") String jwt, @PathVariable Long hostelId,
+	public ResponseEntity<RoomTypeDTO> createRoomType(@RequestHeader("Authorization") String jwt, @PathVariable Long hostelId,
 			@RequestBody RoomType dto) throws AppException {
 		RoomTypeDTO roomTypeInHostel = adminService.createRoomTypeInHostel(dto, hostelId, jwt);
 		return ResponseEntity.ok(roomTypeInHostel);
 	}
 
 	@PutMapping("/update-roomtype/{roomTypeId}")
-	public ResponseEntity<?> updateRoomType(@PathVariable Long roomTypeId, @RequestBody RoomTypeDTO dto)
+	public ResponseEntity<RoomTypeDTO> updateRoomType(@PathVariable Long roomTypeId, @RequestBody RoomTypeDTO dto)
 			throws Exception {
 		RoomTypeDTO updateTypeRoom = adminService.updateRoomType(roomTypeId, dto);
 		return ResponseEntity.ok(updateTypeRoom);
 	}
 
 	@DeleteMapping("/delete-roomtype/{roomId}")
-	public ResponseEntity<?> deleteRoomType(@RequestHeader("Authorization") String jwt, @PathVariable Long roomId)
+	public ResponseEntity<MessageResponse> deleteRoomType(@RequestHeader("Authorization") String jwt, @PathVariable Long roomId)
 			throws Exception {
 
 		MessageResponse deleteRoomType = adminService.deleteRoomType(roomId);
@@ -93,46 +93,48 @@ public class AdminController {
 	}
 
 	@PostMapping("/create-room")
-	public ResponseEntity<?> createRoomInHostel(@RequestBody RoomDTO roomDto) throws AppException {
+	public ResponseEntity<RoomDTO> createRoomInHostel(@RequestBody RoomDTO roomDto) throws AppException {
 		RoomDTO room = adminService.createRoom(roomDto);
 		return ResponseEntity.ok(room);
 	}
 
 	@PostMapping("/add-user")
-	public ResponseEntity<?> addStudentInHostel(@RequestHeader("Authorization") String jwt,
+	public ResponseEntity<StudentDTO> addStudentInHostel(@RequestHeader("Authorization") String jwt,
 			@RequestBody StudentBookingRequest request) throws Exception {
+		
 		StudentDTO studentInHostel = adminService.addStudentInHostel(request);
+		
 		return ResponseEntity.ok(studentInHostel);
 	}
 
 	@DeleteMapping("/remove-student/{studentId}")
-	public ResponseEntity<?> deleteStudentInHostel(@PathVariable Long studentId) throws Exception {
+	public ResponseEntity<MessageResponse> deleteStudentInHostel(@PathVariable Long studentId) throws Exception {
 
 		MessageResponse response = adminService.removeStudentFromHostel(studentId);
 		return ResponseEntity.ok(response);
 	}
 
 	@PostMapping("/create-floor")
-	public ResponseEntity<?> addFloor(@RequestBody FloorDTO dto) {
+	public ResponseEntity<FloorDTO> addFloor(@RequestBody FloorDTO dto) {
 
 		FloorDTO floor = adminService.createFloor(dto);
 		return ResponseEntity.ok(floor);
 	}
 
 	@GetMapping("/fetch-students/{hostelId}")
-	public ResponseEntity<?> getAllStudentInHostel(@PathVariable Long hostelId) throws Exception {
+	public ResponseEntity<List<StudentDTO>> getAllStudentInHostel(@PathVariable Long hostelId) throws Exception {
 		List<StudentDTO> students = adminService.getAllStudentInHostels(hostelId);
 		return ResponseEntity.ok(students);
 	}
 
 	@GetMapping("/fetch-payment/{hostelId}")
-	public ResponseEntity<?> getStudentPayementHistory(@PathVariable Long hostelId) throws Exception {
+	public ResponseEntity<List<PaymentDTO>> getStudentPayementHistory(@PathVariable Long hostelId) throws Exception {
 		List<PaymentDTO> paymentsForHostel = adminService.getPaymentsForHostel(hostelId);
 		return ResponseEntity.ok(paymentsForHostel);
 	}
 
 	@PostMapping("/add-payment")
-	public ResponseEntity<?> makeStudentPayment(@RequestBody AddPaymentRequest request) throws Exception {
+	public ResponseEntity<PaymentDTO> makeStudentPayment(@RequestBody AddPaymentRequest request) throws Exception {
 
 		PaymentDTO addStudentPayment = adminService.AddStudentPayment(request);
 		return ResponseEntity.ok(addStudentPayment);
@@ -144,33 +146,33 @@ public class AdminController {
 	}
 
 	@GetMapping("/asign-room/{bookingId}/{roomId}")
-	public ResponseEntity<?> asignRoomToStudent(@PathVariable Long bookingId, @PathVariable Long roomId)
+	public ResponseEntity<RoomDTO> asignRoomToStudent(@PathVariable Long bookingId, @PathVariable Long roomId)
 			throws Exception {
 		RoomDTO asignRoomToStudent = adminService.asignRoomToStudent(bookingId, roomId);
 		return ResponseEntity.ok(asignRoomToStudent);
 	}
 
 	@DeleteMapping("/remove-booking-student/{bookingId}")
-	public ResponseEntity<?> removeStudentFromBooking(@PathVariable Long bookingId) throws Exception {
+	public ResponseEntity<String> removeStudentFromBooking(@PathVariable Long bookingId) throws Exception {
 		adminService.removeStudentBooking(bookingId);
 		return ResponseEntity.ok("booking deleted successfully");
 	}
 
 	@GetMapping("/payment-status/{paymentId}")
-	public ResponseEntity<?> confermStudentPayment(@PathVariable Long paymentId) throws Exception {
+	public ResponseEntity<MessageResponse> confermStudentPayment(@PathVariable Long paymentId) throws Exception {
 		MessageResponse confermStudentPayment = adminService.confermStudentPayment(paymentId);
 		return ResponseEntity.ok(confermStudentPayment);
 	}
 
 	@GetMapping("/fetch-bookings/{hostelId}")
-	public ResponseEntity<?> getAllBookings(@PathVariable Long hostelId) throws Exception {
+	public ResponseEntity<List<BookingDTO>> getAllBookings(@PathVariable Long hostelId) throws Exception {
 		List<BookingDTO> bookings = adminService.getAllStudentBookings(hostelId);
 		return ResponseEntity.ok(bookings);
 
 	}
 
 	@GetMapping("/dashboard")
-	public ResponseEntity<?> getDashboardData(@RequestParam String email) {
+	public ResponseEntity<HostelDashboardDetailsDto> getDashboardData(@RequestParam String email) {
 		HostelDashboardDetailsDto dashboardDetails = dashboardService.getDashboardDetails(email);
 		return ResponseEntity.ok(dashboardDetails);
 	}

@@ -49,7 +49,6 @@ public class PaymentService {
 	    	paymentRepository.save(payment);
 	    	
 	    	student.setPaymentStatus("PENDING");
-	    	student.setLastPaymentDate(null);
 	    	userRepository.save(student);
 	    	
 	    	notificationService.createNotification(student, "Your payment is pending. Please pay before due date. "

@@ -33,8 +33,14 @@ public class User {
     @Column(unique = true)
     private String phone;
     private String password;
+    
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private Gender gender;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Role role;
 
     // -----------------------------------

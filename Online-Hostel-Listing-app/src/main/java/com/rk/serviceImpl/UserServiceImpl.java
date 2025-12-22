@@ -2,6 +2,7 @@ package com.rk.serviceImpl;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -66,7 +67,7 @@ public class UserServiceImpl implements UserService {
 		return UserDTO.builder().imageUrl(user.getImageUrl() != null ? user.getImageUrl() : null)
 				.idUrl(user.getIdUrl() != null ? user.getIdUrl() : null).id(user.getId()).email(user.getEmail())
 				.hostelId(user.getHostels() != null ? user.getHostels().getId() : null).fullName(user.getFullName())
-				.phone(user.getPhone()).role(user.getRole()).build();
+				.phone(user.getPhone()).role(user.getRole()).gender(user.getGender().name()).build();
 
 	}
 
@@ -160,7 +161,7 @@ public class UserServiceImpl implements UserService {
 		Booking b = bookingRepository.findByStudentId(user.getId());
 
 		if (b == null)
-			throw new RuntimeException("booking not found");
+			throw new RuntimeException("Booking not found!");
 
 		Hostel h = b.getHostel();
 		User student = b.getStudent();
@@ -205,7 +206,7 @@ public class UserServiceImpl implements UserService {
 		Booking booking = bookingRepository.findByStudentId(user.getId());
 
 		if (booking == null) {
-			throw new RuntimeException("booking not available");
+			return Collections.emptyList();
 		}
 		List<Payment> payments = booking.getPayments();
 
@@ -237,11 +238,43 @@ public class UserServiceImpl implements UserService {
 
 		return list;
 	}
+	
+	@Override
+	public RatingDTO updateRating(RatingDTO dto) throws Exception {
+		Rating rating = ratingRepository.findById(dto.getId()).orElseThrow(()-> new RuntimeException("Rating not found!"));
+		
+		rating.setCategory(ReviewCategory.valueOf(dto.getCategory()));
+		rating.setScore(dto.getScore());
+		rating.setComment(dto.getComment());
+		
+		Rating save = ratingRepository.save(rating);
+		
+		return RatingDTO
+				.builder()
+				.id(save.getId())
+				.comment(save.getComment())
+				.category(save.getCategory().name())
+				.createdAt(save.getCreatedAt())
+				.hostelName(save.getHostel().getName())
+				.hostelId(save.getHostel().getId())
+				.score(save.getScore())
+				.studentId(save.getStudent().getId())
+				.studentName(save.getStudent().getFullName())
+				.build();
+	}
+	
+	@Override
+	public String deleteRating(Long id) throws Exception {
+		 ratingRepository.findById(id).orElseThrow(()-> new RuntimeException("Rating not found!"));
+		 ratingRepository.deleteById(id);
+		return "Rating Deleted..";
+	}
 
 	@Override
 	public FavoriteDTO addToFavorite(String jwt, Long hostelId) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
+		
 		User user = userRepository.findByEmail(username).orElseThrow(() -> new RuntimeException("Invalid user id"));
 
 		Hostel hostel = hostelRepository.findById(hostelId)
@@ -289,17 +322,26 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public Long removeToFavorite(String jwt, Long hostelId) throws AppException {
+	public Long removeToFavorite(String jwt, Long id) throws AppException {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
+		
 		User user = userRepository.findByEmail(username).orElseThrow(() -> new RuntimeException("Invalid user id"));
 
-		Favorite favorite = favoriteRepository.findByStudentIdAndHostelId(user.getId(), hostelId);
-		if (favorite == null)
+		//Favorite favorite = favoriteRepository.findByStudentIdAndHostelId(user.getId(), hostelId);
+		
+		Favorite favorite = favoriteRepository.findById(id).orElseThrow(()-> new RuntimeException("invalid favorite id"));
+		
+		if (favorite == null) {
 			throw new RuntimeException("favorite not found");
+		}
+			
+		
 		List<Favorite> favorites = user.getFavorites();
+		
 		favorites.remove(favorite);
 
+		user.setFavorites(favorites);
 		userRepository.save(user);
 
 		favoriteRepository.delete(favorite);
@@ -336,5 +378,9 @@ public class UserServiceImpl implements UserService {
 			userRepository.save(u);
 		});
 	}
+	
+
+	
+
 
 }

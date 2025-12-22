@@ -1,5 +1,6 @@
 package com.rk.controller;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.rk.dto.HostelDTO;
 import com.rk.dto.UserDTO;
+import com.rk.entity.Gender;
 import com.rk.entity.Notification;
 import com.rk.entity.User;
 import com.rk.exception.AppException;
@@ -40,24 +42,35 @@ public class CommonController {
 	private final NotificationService notificationService;
 
 	@GetMapping("/fetch-hostels")
-	public ResponseEntity<?> getAllHostels(
-	        @RequestParam(defaultValue = "0") int page,
-	        @RequestParam(defaultValue = "6") int size,
-	        @RequestParam(required = false) String sharingType) throws Exception {
+	public ResponseEntity<?> getHostels(
+	        @RequestParam(required = false) String city,
+	        @RequestParam(required = false) Integer sharingType,
+	        @RequestParam(required = false) String gender,
+	        @RequestParam(required = false) Integer minRent,
+	        @RequestParam(required = false) Integer maxRent,
+	        @RequestParam(required = false) Integer rating,
+	        @RequestParam(required = false) List<String> facilities,
+	        @RequestParam(defaultValue = "pricePerMonth") String sortBy,
+	        @RequestParam(defaultValue = "asc") String sortDir
+	        ) throws Exception {
 
-	    List<HostelDTO> allHostels = hostelService.getAllHostels(page, size, sharingType);
-
-	    Map<String, Object> response = new HashMap<>();
-	    response.put("content", allHostels);
-	    response.put("page", page);
-	    response.put("last", allHostels.size() < size); // ✅ last page condition
-
-	    return ResponseEntity.ok(response);
+		Map<String,Object> filters = new HashMap<>();
+		filters.put("city", city);
+		filters.put("sharingType", sharingType);
+		filters.put("gender", gender);
+		filters.put("minRent", minRent);
+		filters.put("maxRent", maxRent);
+		filters.put("rating", rating);
+		filters.put("facilities", facilities);
+		filters.put("sortBy", sortBy);
+		filters.put("sortDir", sortDir);
+		List<HostelDTO> filteredHostels = hostelService.getFilteredHostels(filters);
+	    return ResponseEntity.ok(filteredHostels);
 	}
 
 	
 	@GetMapping("/user-profile")
-	public ResponseEntity<?> getUser(@RequestHeader("Authorization") String jwt) throws Exception{
+	public ResponseEntity<UserDTO> getUser(@RequestHeader("Authorization") String jwt) throws Exception{
 		 UserDTO user = userService.getUser(jwt);
 		if(user==null) {
 			throw new Exception("user not found first login");
@@ -67,7 +80,7 @@ public class CommonController {
 	
 	
 	@PutMapping("/update-profile")
-	public ResponseEntity<?> updateUserProfile(@RequestBody UpdateUserProfileRequest req){
+	public ResponseEntity<UserDTO> updateUserProfile(@RequestBody UpdateUserProfileRequest req){
 		User user = userRepository.findById(req.getId()).orElseThrow(()-> new RuntimeException("invalid user id"));
 		
 		if(req.getFullName()!=null) {
@@ -92,12 +105,18 @@ public class CommonController {
 			user.setIdUrl(req.getIdUrl());
 		}
 		
+		if(req.getGender()!=null) {
+			user.setGender(Gender.valueOf(req.getGender()));
+		}
+		
+		
 		
 		User save = userRepository.save(user);
 		
 		UserDTO dto = UserDTO.builder().id(save.getId()).email(save.getEmail())
 				.imageUrl(save.getImageUrl()!=null ? save.getImageUrl() : null)
 				.idUrl(save.getIdUrl()!=null ? save.getIdUrl() : null)
+				.gender(save.getGender().name())
 		.hostelId(save.getHostels() != null ? save.getHostels().getId() : null).fullName(save.getFullName())
 		.phone(save.getPhone()).role(save.getRole()).build();
 		
@@ -108,7 +127,7 @@ public class CommonController {
 	
 	
 	@GetMapping("/fetch-notification")
-	public ResponseEntity<?> getNotifications(@RequestParam String email) throws Exception{ 
+	public ResponseEntity<List<Notification>> getNotifications(@RequestParam String email) throws Exception{ 
 		Optional<User> byEmail = userService.findByEmail(email);
 		
 		if(byEmail.isEmpty()) throw new AppException("invalid email");
@@ -123,14 +142,14 @@ public class CommonController {
 	
 	
 	@PatchMapping("/{id}/read")
-	public ResponseEntity<?> markAsRead(@PathVariable Long id)throws AppException{
+	public ResponseEntity<Notification> markAsRead(@PathVariable Long id)throws AppException{
 		Notification markAsRead = notificationService.markAsRead(id);
 		return ResponseEntity.ok(markAsRead);
 	}
 	
 	
 	@PatchMapping("/read-all")
-	public ResponseEntity<?>  markAllAsRead(@RequestParam String email){
+	public ResponseEntity<List<Notification>>  markAllAsRead(@RequestParam String email){
 		List<Notification> markAllAsRead = notificationService.markAllAsRead(email);
 		return ResponseEntity.ok(markAllAsRead);
 	}

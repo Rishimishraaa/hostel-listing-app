@@ -15,6 +15,7 @@ public class StudentDTO {
     private Long id;
     private String fullName;
     private String email;
+    private String gender;
     private String phone;
     private String paymentStatus;
     private String currentRoomNumber;
@@ -24,4 +25,5 @@ public class StudentDTO {
     private Long hostelId;
     private Long roomId;
     private String imageUrl;
+    private String idUrl;
 }

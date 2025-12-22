@@ -46,6 +46,7 @@ public class Hostel {
     private String name;
     private boolean status;
     private String description;
+    private String isApproved;
 
     @Embedded
     private Address address;

@@ -3,6 +3,7 @@ package com.rk.serviceImpl;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -12,7 +13,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.rk.config.JwtService;
 import com.rk.dto.AddressDTO;
@@ -37,6 +40,7 @@ import com.rk.entity.ContactInformation;
 import com.rk.entity.Facilities;
 import com.rk.entity.Floor;
 import com.rk.entity.FoodInfo;
+import com.rk.entity.Gender;
 import com.rk.entity.Hostel;
 import com.rk.entity.HostelImage;
 import com.rk.entity.Payment;
@@ -68,7 +72,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Data
 public class AdminServiceImpl implements AdminService {
-
+	private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
 	private final UserRepository userRepository;
 	private final HostelRepository hostelRepository;
 	private final JwtService jwtService;
@@ -94,6 +98,7 @@ public class AdminServiceImpl implements AdminService {
 		jwt = jwt.substring(7);
 		String username = jwtService.extractUsername(jwt);
 		User owner = userRepository.findByEmail(username).get();
+		hostel.setIsApproved("PENDING");
 		hostel.setOwner(owner);
 
 		if (hostel.getRatings() == null) {
@@ -172,6 +177,7 @@ public class AdminServiceImpl implements AdminService {
 
 		HostelDTO hostelDTO = HostelDTO.builder().id(h.getId()).gender(h.getGender()).owner(userDTO).name(h.getName())
 				.status(h.isStatus()).description(h.getDescription()).address(addressDTO)
+				.isApproved(h.getIsApproved())
 				.contactInfo(contactInformationDTO).policies(policiesDTO).facilities(facilitiesDTO).images(imageDto)
 				.ratings(ratingDto).foodInfo(foodInfoDTO).floors(roomTypeDto).build();
 
@@ -188,6 +194,7 @@ public class AdminServiceImpl implements AdminService {
 				.id(dto.getId())
 				.gender(dto.getGender())
 				.name(dto.getName())
+				.status(dto.isStatus())
 				.description(dto.getDescription())
 				.owner(owner).build();
 
@@ -231,6 +238,8 @@ public class AdminServiceImpl implements AdminService {
 				.messChargePerMonth(foodInfo.getMessChargePerMonth()).build();
 
 		hostel.setFoodInfo(foodInfoDto);
+		hostel.setIsApproved(dto.getIsApproved());
+		
 
 		List<HostelImage> imagelist = images.stream()
 				.map(img -> HostelImage.builder().id(img.getId()).imageUrl(img.getImageUrl()).hostel(hostel).build())
@@ -258,6 +267,14 @@ public class AdminServiceImpl implements AdminService {
 		}
 		
 		Hostel hostel = hostelRepository.findById(hostelId).get();
+		
+		  if (!hostel.getIsApproved().equalsIgnoreCase("APPROVED")) {
+		        throw new ResponseStatusException(
+		            HttpStatus.FORBIDDEN, 
+		            "Hostel not approved yet"
+		        );
+		    }
+		
 		room.setHostel(hostel);
 		if (room.getImages() != null) {
 			room.getImages().forEach(img -> img.setRoomType(room));
@@ -386,7 +403,15 @@ public class AdminServiceImpl implements AdminService {
 
 		Floor floors = floorRepository.findById(dto.getFloorId())
 				.orElseThrow(() -> new AppException("invalid floor id"));
-
+		
+		Hostel hostel = floors.getHostel();
+		
+		  if (!hostel.getIsApproved().equalsIgnoreCase("APPROVED")) {
+		        throw new ResponseStatusException(
+		            HttpStatus.FORBIDDEN, 
+		            "Hostel not approved yet"
+		        );
+		    }
 		RoomType roomSharing = roomTypeRepository.findById(dto.getRoomTypeId())
 				.orElseThrow(() -> new AppException("invalid sharing type / capacity"));
 
@@ -411,16 +436,35 @@ public class AdminServiceImpl implements AdminService {
 	public StudentDTO addStudentInHostel(StudentBookingRequest request) throws AppException {
 		BookingDTO bookingDto = request.getBooking();
 		StudentDTO studentDto = request.getStudent();
+		
+		
 		User user = null;
 		Optional<User> byEmail = userRepository.findByEmail(studentDto.getEmail());
+		Optional<User> byPhone = userRepository.findByPhone(request.getStudent().getPhone());
 		
+		if(byPhone.isPresent()) {
+			throw new RuntimeException("phone already used another account!");
+		}
+		if(byEmail.isPresent()) {
+			throw new RuntimeException("email already used another account!");
+		}
 		
 
 		Hostel hostel = hostelRepository.findById(bookingDto.getHostelId())
 				.orElseThrow(() -> new AppException("invalid hostel id"));
+		
+		
+		  if (!hostel.getIsApproved().equalsIgnoreCase("APPROVED")) {
+		        throw new ResponseStatusException(
+		            HttpStatus.FORBIDDEN, 
+		            "Hostel not approved yet"
+		        );
+		    }
+		
 		Room room = roomRepository.findById(bookingDto.getRoomId())
 				.orElseThrow(() -> new AppException("invalid room id"));
 		RoomType roomType = room.getRoomType();
+		
 
 		if (room.getCapacity() < room.getOccupacy()) {
 			throw new AppException("room is full try another room!");
@@ -428,22 +472,33 @@ public class AdminServiceImpl implements AdminService {
 
 		if (byEmail.isPresent()) {
 			User user2 = byEmail.get();
-			user = User.builder().paymentStatus(user2.getPaymentStatus()).lastPaymentDate(user2.getLastPaymentDate())
-					.isActive(user2.getIsActive()).id(user2.getId()).fullName(studentDto.getFullName())
-					.email(studentDto.getEmail()).phone(studentDto.getPhone())
+			user = User.builder()
+					.paymentStatus(user2.getPaymentStatus())
+					.lastPaymentDate(user2.getLastPaymentDate())
+					.isActive(user2.getIsActive()).id(user2.getId())
+					.fullName(user2.getFullName())
+					.email(user2.getEmail()).phone(user2.getPhone())
 					.addedByOwner(true)
-					.role(Role.STUDENT).room(room)
-					.hostels(hostel).joiningDate(LocalDate.now()).build();
+					.gender(user2.getGender())
+					.role(user2.getRole()).room(room)
+					.hostels(hostel).joiningDate(user2.getJoiningDate()).build();
+			
 		} else {
-			user = User.builder().joiningDate(LocalDate.parse(bookingDto.getStartDate().toString().substring(0, 10)))
-					.paymentStatus("PENDING").isActive(true).fullName(studentDto.getFullName())
+
+			user = User.builder()
+					.joiningDate(LocalDate.parse(bookingDto.getStartDate().toString().substring(0, 10)))
+					.paymentStatus("PENDING").isActive(true)
+					.fullName(studentDto.getFullName())
 					.email(studentDto.getEmail())
+					.gender(Gender.valueOf(studentDto.getGender()!=null ? studentDto.getGender() : "NOTDEFINE"))
 					.addedByOwner(true)
-					.phone(studentDto.getPhone()).role(Role.STUDENT).room(room)
-					.hostels(hostel).joiningDate(LocalDate.now()).build();
+					.phone(studentDto.getPhone()).role(Role.STUDENT)
+					.room(room)
+					.hostels(hostel).joiningDate(LocalDate.now(INDIA_ZONE))
+					.build();
+			
 		}
 		
-
 		User save = userRepository.save(user);
 
 		Booking booking = Booking.builder().isActive(true).status("CONFIRMED").student(save).hostel(hostel).room(room)
@@ -531,7 +586,6 @@ public class AdminServiceImpl implements AdminService {
 
 		// 7️⃣ Update student last payment info
 		student.setPaymentStatus("PENDING");
-		student.setLastPaymentDate(null);
 		userRepository.save(student);
 
 		notificationService.createNotification(student, "Your payment is pending. Please pay before due date.");
@@ -556,7 +610,7 @@ public class AdminServiceImpl implements AdminService {
 	        payment.setStatus("PAID");
 	    }
 
-	    payment.setPaidOn(LocalDateTime.now());
+	    payment.setPaidOn(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
 
 	    Booking booking = payment.getBooking();
 
@@ -580,7 +634,7 @@ public class AdminServiceImpl implements AdminService {
 	    // ✅ Notifications
 	    notificationService.createNotification(user, "Payment received by Owner Successfully!");
 	    notificationService.createNotification(owner,
-	            "Payment received by: " + user.getFullName() +
+	            "Payment received from: " + user.getFullName() +
 	            " Room Number: " + payment.getBooking().getRoom().getRoomNumber() +
 	            " Mobile: " + user.getPhone() +
 	            " Rs. " + payment.getAmount());
@@ -647,6 +701,8 @@ public class AdminServiceImpl implements AdminService {
 							.email(student.getEmail()).phone(student.getPhone())
 							.paymentStatus(student.getPaymentStatus()).currentRoomNumber(room.getRoomNumber())
 							.payments(payments)
+							.imageUrl(student.getImageUrl())
+							.idUrl(student.getIdUrl())
 							.joiningDate(student.getJoiningDate() != null ? student.getJoiningDate().toString() : null)
 							.lastPaymentDate(
 									student.getLastPaymentDate() != null ? student.getLastPaymentDate().toString()
@@ -668,6 +724,13 @@ public class AdminServiceImpl implements AdminService {
 
 		Hostel hostel = hostelRepository.findById(dto.getHostelId())
 				.orElseThrow(() -> new AppException("invalid hostel id"));
+		
+		  if (!hostel.getIsApproved().equalsIgnoreCase("APPROVED")) {
+		        throw new ResponseStatusException(
+		            HttpStatus.FORBIDDEN, 
+		            "Hostel not approved yet"
+		        );
+		    }
 
 		Floor f = new Floor();
 		f.setFloorNumber(dto.getFloorNumber());
@@ -689,6 +752,14 @@ public class AdminServiceImpl implements AdminService {
 			User student = b.getStudent();
 			Room room = b.getRoom();
 
+			
+			  if (!hostel.getIsApproved().equalsIgnoreCase("APPROVED")) {
+			        throw new ResponseStatusException(
+			            HttpStatus.FORBIDDEN, 
+			            "Hostel not approved yet"
+			        );
+			    }
+			
 			HostelDTO hostelDTO = HostelDTO.builder().id(hostel.getId()).name(hostel.getName()).build();
 
 			UserDTO studentDTO = UserDTO.builder().id(student.getId()).fullName(student.getFullName())

@@ -2,6 +2,7 @@ package com.rk.serviceImpl;
 
 import java.io.File;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 
 import org.json.JSONObject;
@@ -262,7 +263,7 @@ public class PaymentServiceImpl implements PaymentService {
 
 				Payment payment = getPaymentById(paymentId);
 				payment.setStatus("PAID");
-				payment.setPaidOn(LocalDateTime.now());
+				payment.setPaidOn(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
 				paymentRepository.save(payment);
 
 				Booking booking = bookingRepository.findById(payment.getBooking().getId())
@@ -275,14 +276,14 @@ public class PaymentServiceImpl implements PaymentService {
 
 				User student = payment.getBooking().getStudent();
 				student.setPaymentStatus("PAID");
-				student.setLastPaymentDate(LocalDateTime.now());
+				student.setLastPaymentDate(LocalDateTime.now(ZoneId.of("Asia/Kolkata")));
 				userRepository.save(student);
 
 				User owner = userRepository.findById(payment.getBooking().getHostel().getOwner().getId())
 						.orElseThrow(() -> new AppException("Hostel id invalid!"));
 
 				notificationService.createNotification(owner,
-						"Payment received by: " + student.getFullName() + " Room No: "
+						"Payment received from: " + student.getFullName() + " Room No: "
 								+ payment.getBooking().getRoom().getRoomNumber() + " Mobile: " + student.getPhone()
 								+ " Rs. " + payment.getAmount());
 
